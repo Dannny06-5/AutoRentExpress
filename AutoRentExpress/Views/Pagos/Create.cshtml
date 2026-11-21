@@ -1,0 +1,230 @@
+@model AutoRentExpress.DTOs.PagoDto
+
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Registrar Pago";
+
+    var contratos = ViewBag.Contratos as List<AutoRentExpress.DTOs.PagoContratoDto>
+        ?? new List<AutoRentExpress.DTOs.PagoContratoDto>();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Registrar Nuevo Pago</h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-controller="Pagos"
+                          asp-action="Create"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="All"
+                             class="text-danger mb-3"></div>
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <label asp-for="ContratoId" class="form-label">
+                                    Contrato
+                                </label>
+
+                                <select asp-for="ContratoId"
+                                        id="ContratoId"
+                                        class="form-select"
+                                        required>
+
+                                    <option value="0">
+                                        Selecciona un contrato
+                                    </option>
+
+                                    @foreach (var contrato in contratos)
+                                    {
+                                        <option value="@contrato.Id"
+                                                data-total="@contrato.TotalContrato.ToString(CultureInfo.InvariantCulture)"
+                                                data-pagado="@contrato.TotalPagado.ToString(CultureInfo.InvariantCulture)"
+                                                data-saldo="@contrato.SaldoPendiente.ToString(CultureInfo.InvariantCulture)">
+                                            @contrato.NumeroContrato - @contrato.NombreCliente
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="ContratoId"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body">
+                                        <h6 class="fw-bold">Resumen del contrato</h6>
+
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Total del contrato</span>
+                                            <strong id="TotalContrato">$0.00</strong>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Total pagado</span>
+                                            <strong id="TotalPagado">$0.00</strong>
+                                        </div>
+
+                                        <hr />
+
+                                        <div class="d-flex justify-content-between">
+                                            <span class="fw-bold">Saldo pendiente</span>
+                                            <strong id="SaldoPendiente"
+                                                    class="text-primary fs-5">
+                                                $0.00
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Monto" class="form-label">
+                                    Monto del pago ($)
+                                </label>
+
+                                <input asp-for="Monto"
+                                       id="Monto"
+                                       type="number"
+                                       min="0.01"
+                                       max="100000000"
+                                       step="0.01"
+                                       class="form-control"
+                                       required />
+
+                                <span asp-validation-for="Monto"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Metodo" class="form-label">
+                                    Método de pago
+                                </label>
+
+                                <select asp-for="Metodo"
+                                        id="Metodo"
+                                        class="form-select"
+                                        required>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                </select>
+
+                                <span asp-validation-for="Metodo"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Referencia" class="form-label">
+                                    Referencia o comprobante
+                                </label>
+
+                                <input asp-for="Referencia"
+                                       id="Referencia"
+                                       class="form-control"
+                                       maxlength="100"
+                                       placeholder="Número de transacción o referencia" />
+
+                                <div class="form-text" id="TextoReferencia">
+                                    Opcional para efectivo.
+                                </div>
+
+                                <span asp-validation-for="Referencia"
+                                      class="text-danger"></span>
+                            </div>
+
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a asp-controller="Pagos"
+                               asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Registrar Pago
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (() => {
+            const contrato = document.getElementById("ContratoId");
+            const monto = document.getElementById("Monto");
+            const metodo = document.getElementById("Metodo");
+            const referencia = document.getElementById("Referencia");
+            const textoReferencia = document.getElementById("TextoReferencia");
+
+            const formato = new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD"
+            });
+
+            function actualizarContrato() {
+                const opcion = contrato.selectedOptions[0];
+
+                const total = Number(opcion?.dataset.total || 0);
+                const pagado = Number(opcion?.dataset.pagado || 0);
+                const saldo = Number(opcion?.dataset.saldo || 0);
+
+                document.getElementById("TotalContrato").textContent =
+                    formato.format(total);
+
+                document.getElementById("TotalPagado").textContent =
+                    formato.format(pagado);
+
+                document.getElementById("SaldoPendiente").textContent =
+                    formato.format(saldo);
+
+                if (saldo > 0) {
+                    monto.max = saldo.toFixed(2);
+                } else {
+                    monto.removeAttribute("max");
+                }
+
+                monto.disabled = saldo <= 0;
+
+                if (saldo <= 0 && Number(contrato.value) > 0) {
+                    monto.value = "";
+                }
+            }
+
+            function actualizarMetodo() {
+                const requiereReferencia =
+                    metodo.value === "Tarjeta" ||
+                    metodo.value === "Transferencia";
+
+                referencia.required = requiereReferencia;
+
+                textoReferencia.textContent = requiereReferencia
+                    ? "La referencia es obligatoria para este método."
+                    : "Opcional para efectivo.";
+            }
+
+            contrato.addEventListener("change", actualizarContrato);
+            metodo.addEventListener("change", actualizarMetodo);
+
+            actualizarContrato();
+            actualizarMetodo();
+        })();
+    </script>
+}

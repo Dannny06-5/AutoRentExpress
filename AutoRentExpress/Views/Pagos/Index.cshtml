@@ -1,0 +1,256 @@
+@model List<AutoRentExpress.DTOs.PagoDto>
+
+@{
+    ViewData["Title"] = "Pagos";
+}
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Pagos</h2>
+            <p class="text-muted mb-0">
+                Registro y consulta de pagos de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Pagos"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Pago
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["Exito"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de pagos</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pagos confirmados</h6>
+                    <h2 class="fw-bold text-success">
+                        @Model.Count(p => p.Estado == "Confirmado")
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total recibido</h6>
+                    <h2 class="fw-bold text-success">
+                        $@Model.Where(p => p.Estado == "Confirmado").Sum(p => p.Monto).ToString("N2")
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Contrato</th>
+                            <th>Cliente</th>
+                            <th>Fecha</th>
+                            <th>Monto</th>
+                            <th>Método</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var pago in Model)
+                        {
+                            <tr>
+                                <td>@pago.Id</td>
+
+                                <td class="fw-semibold">
+                                    @pago.NumeroContrato
+                                </td>
+
+                                <td>@pago.NombreCliente</td>
+
+                                <td>
+                                    @pago.FechaPago.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    $@pago.Monto.ToString("N2")
+                                </td>
+
+                                <td>@pago.Metodo</td>
+
+                                <td>
+                                    @if (pago.Estado == "Confirmado")
+                                    {
+                                        <span class="badge bg-success">
+                                            Confirmado
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            @pago.Estado
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#detallePago-@pago.Id">
+                                        Detalles
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay pagos registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var pago in Model)
+{
+    <div class="modal fade"
+         id="detallePago-@pago.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Detalles del Pago #@pago.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5">Contrato</dt>
+                        <dd class="col-sm-7">
+                            @pago.NumeroContrato
+                        </dd>
+
+                        <dt class="col-sm-5">Cliente</dt>
+                        <dd class="col-sm-7">
+                            @pago.NombreCliente
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha del pago</dt>
+                        <dd class="col-sm-7">
+                            @pago.FechaPago.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Método</dt>
+                        <dd class="col-sm-7">
+                            @pago.Metodo
+                        </dd>
+
+                        <dt class="col-sm-5">Referencia</dt>
+                        <dd class="col-sm-7">
+                            @(string.IsNullOrWhiteSpace(pago.Referencia)
+                                                    ? "Sin referencia"
+                                                    : pago.Referencia)
+                    </dd>
+
+                        <dt class="col-sm-5">Monto pagado</dt>
+                        <dd class="col-sm-7 fw-bold">
+                            $@pago.Monto.ToString("N2")
+                        </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">
+                            @pago.Estado
+                        </dd>
+
+                        <dt class="col-sm-5">Total del contrato</dt>
+                        <dd class="col-sm-7">
+                            $@pago.TotalContrato.ToString("N2")
+                        </dd>
+
+                        <dt class="col-sm-5">Total pagado</dt>
+                        <dd class="col-sm-7">
+                            $@pago.TotalPagado.ToString("N2")
+                        </dd>
+
+                        <dt class="col-sm-5">Saldo pendiente actual</dt>
+                        <dd class="col-sm-7 fw-bold text-primary">
+                            $@pago.SaldoPendiente.ToString("N2")
+                        </dd>
+
+                    </dl>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
