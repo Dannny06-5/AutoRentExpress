@@ -1,0 +1,335 @@
+﻿@model List<AutoRentExpress.DTOs.ClienteDto>
+
+@{
+    ViewData["Title"] = "Clientes";
+    var activos = Model.Count(x => x.Activo);
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Clientes</h2>
+            <p class="text-muted mb-0">Administración de clientes de AutoRent Express</p>
+        </div>
+        <a asp-controller="Clientes"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Cliente
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Exito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de clientes</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Clientes activos</h6>
+                    <h2 class="fw-bold text-success">@activos</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Clientes inactivos</h6>
+                    <h2 class="fw-bold text-secondary">@(Model.Count - activos)</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre completo</th>
+                            <th>Identificación</th>
+                            <th>Teléfono</th>
+                            <th>Correo</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cliente in Model)
+                        {
+                            <tr>
+                                <td>@cliente.Id</td>
+                                <td>@cliente.Nombres @cliente.Apellidos</td>
+                                <td>@cliente.Identificacion</td>
+                                <td>@cliente.Telefono</td>
+                                <td>@(cliente.Correo ?? "Sin correo")</td>
+                                <td>
+                                    @if (cliente.Activo)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarCliente-@cliente.Id">
+                                            Editar
+                                        </button>
+
+                                        @if (cliente.Activo)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#desactivarCliente-@cliente.Id">
+                                                Desactivar
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#activarCliente-@cliente.Id">
+                                                Activar
+                                            </button>
+                                        }
+                                        
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="text-center text-muted py-4">
+                    Todavía no hay clientes registrados.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var cliente in Model)
+{
+    <div class="modal fade"
+         id="editarCliente-@cliente.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar Cliente</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <form asp-controller="Clientes" asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="Id" value="@cliente.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nombres</label>
+                                <input name="Nombres"
+                                       value="@cliente.Nombres"
+                                       class="form-control"
+                                       maxlength="100"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Apellidos</label>
+                                <input name="Apellidos"
+                                       value="@cliente.Apellidos"
+                                       class="form-control"
+                                       maxlength="100"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Identificación</label>
+                                <input name="Identificacion"
+                                       value="@cliente.Identificacion"
+                                       class="form-control"
+                                       maxlength="30"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input name="Telefono"
+                                       value="@cliente.Telefono"
+                                       class="form-control"
+                                       maxlength="30"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Correo</label>
+                                <input name="Correo"
+                                       type="email"
+                                       value="@cliente.Correo"
+                                       class="form-control"
+                                       maxlength="150" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Dirección</label>
+                                <input name="Direccion"
+                                       value="@cliente.Direccion"
+                                       class="form-control"
+                                       maxlength="250" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (cliente.Activo)
+    {
+        <div class="modal fade"
+             id="desactivarCliente-@cliente.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">Desactivar Cliente</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body p-4 text-center">
+                        <h5>¿Deseas desactivar este cliente?</h5>
+                        <p class="text-muted mb-0">
+                            @cliente.Nombres @cliente.Apellidos
+                        </p>
+                        <p class="text-muted mt-2 mb-0">
+                            El cliente permanecerá registrado en el sistema.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Clientes"
+                              asp-action="Desactivar"
+                              method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@cliente.Id" />
+                            <button type="submit" class="btn btn-danger">
+                                Sí, desactivar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (!cliente.Activo)
+    {
+        <div class="modal fade"
+             id="activarCliente-@cliente.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Activar Cliente</h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body p-4 text-center">
+                        <h5>¿Deseas activar este cliente?</h5>
+                        <p class="fw-bold mt-3">
+                            @cliente.Nombres @cliente.Apellidos
+                        </p>
+                        <p class="text-muted mb-0">
+                            El cliente volverá a estar activo en AutoRent Express.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Clientes"
+                              asp-action="Activar"
+                              method="post">
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden" name="id" value="@cliente.Id" />
+
+                            <button type="submit" class="btn btn-success">
+                                Sí, activar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

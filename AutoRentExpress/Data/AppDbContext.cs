@@ -14,7 +14,7 @@ namespace AutoRentExpress.Data
         public DbSet<LicenciaConducir> LicenciasConducir => Set<LicenciaConducir>();
         public DbSet<Sucursal> Sucursales => Set<Sucursal>();
         public DbSet<Empleado> Empleados => Set<Empleado>();
-        public DbSet<CategoriaVehiculo> CategoriasVehiculo => Set<CategoriaVehiculo>();
+        public DbSet<CategoriaVehiculo> CategoriaVehiculo => Set<CategoriaVehiculo>();
         public DbSet<Marca> Marcas => Set<Marca>();
         public DbSet<Modelo> Modelos => Set<Modelo>();
         public DbSet<EstadoVehiculo> EstadosVehiculo => Set<EstadoVehiculo>();
@@ -35,6 +35,7 @@ namespace AutoRentExpress.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<CategoriaVehiculo>().ToTable("CategoriasVehiculo");
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Cliente>()
