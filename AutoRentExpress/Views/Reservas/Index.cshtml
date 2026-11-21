@@ -9,6 +9,9 @@
         ?? new AutoRentExpress.DTOs.ReservaCatalogosDto();
 
     var pendientes = Model.Count(r => r.Estado == "Pendiente");
+    var confirmadas = Model.Count(r => r.Estado == "Confirmada");
+    var enCurso = Model.Count(r => r.Estado == "En curso");
+    var finalizadas = Model.Count(r => r.Estado == "Finalizada");
     var canceladas = Model.Count(r => r.Estado == "Cancelada");
 }
 
@@ -51,7 +54,7 @@
     }
 
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Total de reservas</h6>
@@ -60,7 +63,7 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Pendientes</h6>
@@ -69,14 +72,28 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h6 class="text-muted">Canceladas</h6>
-                    <h2 class="fw-bold text-danger">@canceladas</h2>
+                    <h6 class="text-muted">En curso</h6>
+                    <h2 class="fw-bold text-primary">@enCurso</h2>
                 </div>
             </div>
         </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Finalizadas</h6>
+                    <h2 class="fw-bold text-success">@finalizadas</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 mb-3 text-muted small">
+        <span>Confirmadas: <strong>@confirmadas</strong></span>
+        <span>Canceladas: <strong>@canceladas</strong></span>
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -99,22 +116,41 @@
                     <tbody>
                         @foreach (var reserva in Model)
                         {
+                            var permiteModificar =
+                            (reserva.Estado == "Pendiente" ||
+                            reserva.Estado == "Confirmada") &&
+                            !reserva.TieneContrato;
+
                             <tr>
                                 <td class="fw-semibold">#@reserva.Id</td>
+
                                 <td>@reserva.NombreCliente</td>
+
                                 <td>
                                     <div>@reserva.NombreVehiculo</div>
                                     <small class="text-muted">
                                         @reserva.PlacaVehiculo
                                     </small>
                                 </td>
-                                <td>@reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@reserva.FechaFin.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@reserva.TotalEstimado.ToString("N2")</td>
+
+                                <td>
+                                    @reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    @reserva.FechaFin.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    $@reserva.TotalEstimado.ToString("N2")
+                                </td>
+
                                 <td>
                                     @if (reserva.Estado == "Cancelada")
                                     {
-                                        <span class="badge bg-danger">Cancelada</span>
+                                        <span class="badge bg-danger">
+                                            Cancelada
+                                        </span>
                                     }
                                     else if (reserva.Estado == "Pendiente")
                                     {
@@ -122,13 +158,32 @@
                                             Pendiente
                                         </span>
                                     }
-                                    else
+                                    else if (reserva.Estado == "Confirmada")
+                                    {
+                                        <span class="badge bg-info text-dark">
+                                            Confirmada
+                                        </span>
+                                    }
+                                    else if (reserva.Estado == "En curso")
+                                    {
+                                        <span class="badge bg-primary">
+                                            En curso
+                                        </span>
+                                    }
+                                    else if (reserva.Estado == "Finalizada")
                                     {
                                         <span class="badge bg-success">
+                                            Finalizada
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
                                             @reserva.Estado
                                         </span>
                                     }
                                 </td>
+
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
                                         <button type="button"
@@ -138,7 +193,7 @@
                                             Detalles
                                         </button>
 
-                                        @if (reserva.Estado != "Cancelada")
+                                        @if (permiteModificar)
                                         {
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-primary"
@@ -174,6 +229,11 @@
 
 @foreach (var reserva in Model)
 {
+    var permiteModificar =
+        (reserva.Estado == "Pendiente" ||
+         reserva.Estado == "Confirmada") &&
+        !reserva.TieneContrato;
+
     <div class="modal fade"
          id="detalleReserva-@reserva.Id"
          tabindex="-1"
@@ -185,6 +245,7 @@
                     <h5 class="modal-title">
                         Detalles de la Reserva #@reserva.Id
                     </h5>
+
                     <button type="button"
                             class="btn-close btn-close-white"
                             data-bs-dismiss="modal"
@@ -194,7 +255,9 @@
                 <div class="modal-body p-4">
                     <dl class="row mb-0">
                         <dt class="col-sm-5">Cliente</dt>
-                        <dd class="col-sm-7">@reserva.NombreCliente</dd>
+                        <dd class="col-sm-7">
+                            @reserva.NombreCliente
+                        </dd>
 
                         <dt class="col-sm-5">Vehículo</dt>
                         <dd class="col-sm-7">
@@ -228,13 +291,29 @@
                         </dd>
 
                         <dt class="col-sm-5">Estado</dt>
-                        <dd class="col-sm-7">@reserva.Estado</dd>
+                        <dd class="col-sm-7">
+                            @reserva.Estado
+                        </dd>
+
+                        <dt class="col-sm-5">Contrato generado</dt>
+                        <dd class="col-sm-7">
+                            @(reserva.TieneContrato ? "Sí" : "No")
+                        </dd>
 
                         <dt class="col-sm-5">Total estimado</dt>
                         <dd class="col-sm-7 fw-bold">
                             $@reserva.TotalEstimado.ToString("N2")
                         </dd>
                     </dl>
+
+                    @if (reserva.TieneContrato)
+                    {
+                        <div class="alert alert-info mt-3 mb-0">
+                            Esta reserva ya tiene un contrato registrado.
+                            Las modificaciones del alquiler deben seguir
+                            el procedimiento correspondiente al contrato.
+                        </div>
+                    }
                 </div>
 
                 <div class="modal-footer">
@@ -248,7 +327,7 @@
         </div>
     </div>
 
-    @if (reserva.Estado != "Cancelada")
+    @if (permiteModificar)
     {
         <div class="modal fade"
              id="editarReserva-@reserva.Id"
@@ -257,11 +336,11 @@
 
             <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                 <div class="modal-content border-0 shadow">
-
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title">
                             Editar Reserva #@reserva.Id
                         </h5>
+
                         <button type="button"
                                 class="btn-close btn-close-white"
                                 data-bs-dismiss="modal"
@@ -275,16 +354,22 @@
 
                         @Html.AntiForgeryToken()
 
-                        <input type="hidden" name="Id" value="@reserva.Id" />
+                        <input type="hidden"
+                               name="Id"
+                               value="@reserva.Id" />
 
                         <div class="modal-body p-4">
                             <div class="row g-3">
 
                                 <div class="col-md-6">
-                                    <label class="form-label">Cliente</label>
+                                    <label class="form-label">
+                                        Cliente
+                                    </label>
+
                                     <select name="ClienteId"
                                             class="form-select"
                                             required>
+
                                         @foreach (var opcion in catalogos.Clientes)
                                         {
                                             if (opcion.Id == reserva.ClienteId)
@@ -304,10 +389,14 @@
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label class="form-label">Vehículo</label>
+                                    <label class="form-label">
+                                        Vehículo
+                                    </label>
+
                                     <select name="VehiculoId"
                                             class="form-select selector-vehiculo"
                                             required>
+
                                         @foreach (var opcion in catalogos.Vehiculos)
                                         {
                                             if (opcion.Id == reserva.VehiculoId)
@@ -333,9 +422,11 @@
                                     <label class="form-label">
                                         Sucursal de retiro
                                     </label>
+
                                     <select name="SucursalRetiroId"
                                             class="form-select"
                                             required>
+
                                         @foreach (var opcion in catalogos.Sucursales)
                                         {
                                             if (opcion.Id == reserva.SucursalRetiroId)
@@ -358,9 +449,11 @@
                                     <label class="form-label">
                                         Sucursal de devolución
                                     </label>
+
                                     <select name="SucursalDevolucionId"
                                             class="form-select"
                                             required>
+
                                         @foreach (var opcion in catalogos.Sucursales)
                                         {
                                             if (opcion.Id == reserva.SucursalDevolucionId)
@@ -383,6 +476,7 @@
                                     <label class="form-label">
                                         Fecha y hora de retiro
                                     </label>
+
                                     <input name="FechaInicio"
                                            type="datetime-local"
                                            value="@reserva.FechaInicio.ToString("yyyy-MM-ddTHH:mm")"
@@ -394,6 +488,7 @@
                                     <label class="form-label">
                                         Fecha y hora de devolución
                                     </label>
+
                                     <input name="FechaFin"
                                            type="datetime-local"
                                            value="@reserva.FechaFin.ToString("yyyy-MM-ddTHH:mm")"
@@ -405,16 +500,22 @@
 
                             <div class="card bg-light border-0 mt-4">
                                 <div class="card-body">
-                                    <h6 class="fw-bold">Resumen del alquiler</h6>
+                                    <h6 class="fw-bold">
+                                        Resumen del alquiler
+                                    </h6>
 
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Tarifa diaria</span>
-                                        <strong class="reserva-tarifa">$0.00</strong>
+                                        <strong class="reserva-tarifa">
+                                            $0.00
+                                        </strong>
                                     </div>
 
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Días facturables</span>
-                                        <strong class="reserva-dias">0</strong>
+                                        <strong class="reserva-dias">
+                                            0
+                                        </strong>
                                     </div>
 
                                     <hr />
@@ -436,7 +537,8 @@
                                 Cerrar
                             </button>
 
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit"
+                                    class="btn btn-primary">
                                 Guardar Cambios
                             </button>
                         </div>
@@ -452,11 +554,11 @@
 
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
-
                     <div class="modal-header bg-danger text-white">
                         <h5 class="modal-title">
                             Cancelar Reserva
                         </h5>
+
                         <button type="button"
                                 class="btn-close btn-close-white"
                                 data-bs-dismiss="modal"
@@ -495,7 +597,8 @@
                                    name="id"
                                    value="@reserva.Id" />
 
-                            <button type="submit" class="btn btn-danger">
+                            <button type="submit"
+                                    class="btn btn-danger">
                                 Sí, cancelar reserva
                             </button>
                         </form>

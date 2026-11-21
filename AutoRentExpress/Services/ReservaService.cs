@@ -1,4 +1,5 @@
-﻿using AutoRentExpress.DTOs;
+﻿
+using AutoRentExpress.DTOs;
 using AutoRentExpress.Models;
 using AutoRentExpress.Repositories;
 
@@ -7,16 +8,31 @@ namespace AutoRentExpress.Services
     public class ReservaService : IReservaService
     {
         private readonly IReservaRepository _repository;
+        private readonly IContratoRepository _contratoRepository;
 
-        public ReservaService(IReservaRepository repository)
+        public ReservaService(
+            IReservaRepository repository,
+            IContratoRepository contratoRepository)
         {
             _repository = repository;
+            _contratoRepository = contratoRepository;
         }
 
         public async Task<List<ReservaDto>> ObtenerTodosAsync()
         {
             var reservas = await _repository.ObtenerTodosAsync();
-            return reservas.Select(Mapear).ToList();
+            var contratos = await _contratoRepository.ObtenerTodosAsync();
+
+            var reservasConContrato = contratos
+                .Select(c => c.ReservaId)
+                .ToHashSet();
+
+            return reservas.Select(reserva =>
+            {
+                var dto = Mapear(reserva);
+                dto.TieneContrato = reservasConContrato.Contains(reserva.Id);
+                return dto;
+            }).ToList();
         }
 
         public async Task<ReservaDto?> ObtenerPorIdAsync(int id)
@@ -55,10 +71,10 @@ namespace AutoRentExpress.Services
         }
 
         public async Task<List<ReservaOpcionDto>> ObtenerDisponiblesAsync(
-    DateTime fechaInicio,
-    DateTime fechaFin,
-    int sucursalRetiroId,
-    int reservaId = 0)
+            DateTime fechaInicio,
+            DateTime fechaFin,
+            int sucursalRetiroId,
+            int reservaId = 0)
         {
             if (fechaInicio == default ||
                 fechaFin == default ||
@@ -154,10 +170,17 @@ namespace AutoRentExpress.Services
                     "La reserva no existe.");
             }
 
-            if (reserva.Estado == "Cancelada")
+            if (reserva.Estado != "Pendiente" &&
+                reserva.Estado != "Confirmada")
             {
                 throw new InvalidOperationException(
-                    "No es posible editar una reserva cancelada.");
+                    "Solo puedes editar reservas pendientes o confirmadas.");
+            }
+
+            if (await _contratoRepository.ExisteContratoReservaAsync(reserva.Id))
+            {
+                throw new InvalidOperationException(
+                    "No puedes editar una reserva que ya tiene un contrato registrado.");
             }
 
             var tarifa = await ValidarAsync(dto, dto.Id);
@@ -192,18 +215,17 @@ namespace AutoRentExpress.Services
                     "Esta reserva ya está cancelada.");
             }
 
-            if (reserva.Estado == "En curso" ||
-                reserva.Estado == "Finalizada")
-            {
-                throw new InvalidOperationException(
-                    "No puedes cancelar una reserva cuyo alquiler ya comenzó o terminó.");
-            }
-
             if (reserva.Estado != "Pendiente" &&
                 reserva.Estado != "Confirmada")
             {
                 throw new InvalidOperationException(
-                    "El estado actual de la reserva no permite cancelarla.");
+                    "No puedes cancelar una reserva cuyo alquiler ya comenzó, terminó o no permite cancelación.");
+            }
+
+            if (await _contratoRepository.ExisteContratoReservaAsync(reserva.Id))
+            {
+                throw new InvalidOperationException(
+                    "No puedes cancelar una reserva que ya tiene un contrato registrado.");
             }
 
             reserva.Estado = "Cancelada";
@@ -312,10 +334,10 @@ namespace AutoRentExpress.Services
             }
 
             var nombreEstado = estadoVehiculo.Nombre
-                     .Trim()
-                     .TrimEnd('.')
-                     .Trim()
-                     .ToUpperInvariant();
+                .Trim()
+                .TrimEnd('.')
+                .Trim()
+                .ToUpperInvariant();
 
             if (nombreEstado == "MANTENIMIENTO" ||
                 nombreEstado == "EN MANTENIMIENTO" ||

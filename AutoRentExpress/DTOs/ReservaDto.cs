@@ -35,6 +35,8 @@ namespace AutoRentExpress.DTOs
         public string PlacaVehiculo { get; set; } = string.Empty;
         public string NombreSucursalRetiro { get; set; } = string.Empty;
         public string NombreSucursalDevolucion { get; set; } = string.Empty;
+        public bool TieneContrato { get; set; }
+
     }
 
     public class ReservaOpcionDto
@@ -50,4 +52,5 @@ namespace AutoRentExpress.DTOs
         public List<ReservaOpcionDto> Vehiculos { get; set; } = new();
         public List<ReservaOpcionDto> Sucursales { get; set; } = new();
     }
+
 }
