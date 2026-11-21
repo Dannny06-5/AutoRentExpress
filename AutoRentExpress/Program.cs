@@ -37,6 +37,8 @@ builder.Services.AddScoped<IPagoRepository, PagoRepository>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IMultaRepository, MultaRepository>();
 builder.Services.AddScoped<IMultaService, MultaService>();
+builder.Services.AddScoped<IMantenimientoRepository, MantenimientoRepository>();
+builder.Services.AddScoped<IMantenimientoService, MantenimientoService>();
 
 var app = builder.Build();
 

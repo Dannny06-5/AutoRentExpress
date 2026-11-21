@@ -1,0 +1,176 @@
+@model AutoRentExpress.DTOs.MantenimientoDto
+
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Nuevo Mantenimiento";
+
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.MantenimientoCatalogosDto
+        ?? new AutoRentExpress.DTOs.MantenimientoCatalogosDto();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Registrar Nuevo Mantenimiento</h4>
+                </div>
+
+                <div class="card-body p-4">
+
+                    <form asp-controller="Mantenimientos"
+                          asp-action="Create"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="All"
+                             class="text-danger mb-3"></div>
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label asp-for="VehiculoId" class="form-label">
+                                    Vehículo
+                                </label>
+
+                                <select asp-for="VehiculoId"
+                                        class="form-select"
+                                        required>
+
+                                    <option value="0">
+                                        Selecciona un vehículo
+                                    </option>
+
+                                    @foreach (var opcion in catalogos.Vehiculos)
+                                    {
+                                        <option value="@opcion.Id">
+                                            @opcion.Nombre
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="VehiculoId"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="EmpleadoId" class="form-label">
+                                    Empleado responsable
+                                </label>
+
+                                <select asp-for="EmpleadoId"
+                                        class="form-select"
+                                        required>
+
+                                    <option value="0">
+                                        Selecciona un empleado
+                                    </option>
+
+                                    @foreach (var opcion in catalogos.Empleados)
+                                    {
+                                        <option value="@opcion.Id">
+                                            @opcion.Nombre
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="EmpleadoId"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Tipo" class="form-label">
+                                    Tipo de mantenimiento
+                                </label>
+
+                                <input asp-for="Tipo"
+                                       class="form-control"
+                                       maxlength="100"
+                                       placeholder="Ejemplo: Cambio de aceite"
+                                       required />
+
+                                <span asp-validation-for="Tipo"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="FechaInicio" class="form-label">
+                                    Fecha programada de inicio
+                                </label>
+
+                                <input asp-for="FechaInicio"
+                                       asp-format="{0:yyyy-MM-ddTHH:mm}"
+                                       type="datetime-local"
+                                       class="form-control"
+                                       required />
+
+                                <span asp-validation-for="FechaInicio"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="CostoTotal" class="form-label">
+                                    Costo estimado ($)
+                                </label>
+
+                                <input name="CostoTotal"
+                                       type="number"
+                                       min="0"
+                                       max="100000000"
+                                       step="0.01"
+                                       value="@Model.CostoTotal.ToString("0.00", CultureInfo.InvariantCulture)"
+                                       class="form-control"
+                                       required />
+
+                                <span asp-validation-for="CostoTotal"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="Observaciones" class="form-label">
+                                    Observaciones
+                                </label>
+
+                                <textarea asp-for="Observaciones"
+                                          class="form-control"
+                                          rows="4"
+                                          maxlength="500"
+                                          placeholder="Describe el trabajo que se realizará"></textarea>
+
+                                <span asp-validation-for="Observaciones"
+                                      class="text-danger"></span>
+                            </div>
+
+                        </div>
+
+                        <div class="alert alert-info mt-4 mb-0">
+                            El mantenimiento se registrará como Pendiente.
+                            Después podrás iniciarlo y finalizarlo desde el listado.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+
+                            <a asp-controller="Mantenimientos"
+                               asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar Mantenimiento
+                            </button>
+
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

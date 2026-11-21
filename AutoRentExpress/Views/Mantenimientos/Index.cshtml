@@ -1,0 +1,577 @@
+@model List<AutoRentExpress.DTOs.MantenimientoDto>
+
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Mantenimientos";
+
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.MantenimientoCatalogosDto
+        ?? new AutoRentExpress.DTOs.MantenimientoCatalogosDto();
+
+    var pendientes = Model.Count(m => m.Estado == "Pendiente");
+    var enProceso = Model.Count(m => m.Estado == "En proceso");
+    var finalizados = Model.Count(m => m.Estado == "Finalizado");
+}
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Mantenimientos</h2>
+            <p class="text-muted mb-0">
+                Administración del mantenimiento de la flota de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Mantenimientos"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Mantenimiento
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pendientes</h6>
+                    <h2 class="fw-bold text-warning">@pendientes</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">En proceso</h6>
+                    <h2 class="fw-bold text-primary">@enProceso</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Finalizados</h6>
+                    <h2 class="fw-bold text-success">@finalizados</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Vehículo</th>
+                            <th>Empleado</th>
+                            <th>Tipo</th>
+                            <th>Inicio</th>
+                            <th>Costo</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var mantenimiento in Model)
+                        {
+                            <tr>
+                                <td>@mantenimiento.Id</td>
+
+                                <td>
+                                    <div class="fw-semibold">
+                                        @mantenimiento.NombreVehiculo
+                                    </div>
+                                    <small class="text-muted">
+                                        @mantenimiento.PlacaVehiculo
+                                    </small>
+                                </td>
+
+                                <td>@mantenimiento.NombreEmpleado</td>
+
+                                <td>@mantenimiento.Tipo</td>
+
+                                <td>
+                                    @mantenimiento.FechaInicio.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    $@mantenimiento.CostoTotal.ToString("N2")
+                                </td>
+
+                                <td>
+                                    @if (mantenimiento.Estado == "Pendiente")
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Pendiente
+                                        </span>
+                                    }
+                                    else if (mantenimiento.Estado == "En proceso")
+                                    {
+                                        <span class="badge bg-primary">
+                                            En proceso
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">
+                                            Finalizado
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#detalleMantenimiento-@mantenimiento.Id">
+                                            Detalles
+                                        </button>
+
+                                        @if (mantenimiento.Estado != "Finalizado")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editarMantenimiento-@mantenimiento.Id">
+                                                Editar
+                                            </button>
+                                        }
+
+                                        @if (mantenimiento.Estado == "Pendiente")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#iniciarMantenimiento-@mantenimiento.Id">
+                                                Iniciar
+                                            </button>
+                                        }
+
+                                        @if (mantenimiento.Estado == "En proceso")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#finalizarMantenimiento-@mantenimiento.Id">
+                                                Finalizar
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay mantenimientos registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var mantenimiento in Model)
+{
+    <div class="modal fade"
+         id="detalleMantenimiento-@mantenimiento.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Detalles del Mantenimiento #@mantenimiento.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5">Vehículo</dt>
+                        <dd class="col-sm-7">
+                            @mantenimiento.NombreVehiculo
+                            (@mantenimiento.PlacaVehiculo)
+                        </dd>
+
+                        <dt class="col-sm-5">Empleado responsable</dt>
+                        <dd class="col-sm-7">
+                            @mantenimiento.NombreEmpleado
+                        </dd>
+
+                        <dt class="col-sm-5">Tipo</dt>
+                        <dd class="col-sm-7">
+                            @mantenimiento.Tipo
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de inicio</dt>
+                        <dd class="col-sm-7">
+                            @mantenimiento.FechaInicio.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de finalización</dt>
+                        <dd class="col-sm-7">
+                            @(mantenimiento.FechaFin?.ToString("dd/MM/yyyy HH:mm") ?? "Pendiente")
+                        </dd>
+
+                        <dt class="col-sm-5">Costo total</dt>
+                        <dd class="col-sm-7 fw-bold">
+                            $@mantenimiento.CostoTotal.ToString("N2")
+                        </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">
+                            @mantenimiento.Estado
+                        </dd>
+
+                        <dt class="col-sm-5">Observaciones</dt>
+                        <dd class="col-sm-7">
+                            @(string.IsNullOrWhiteSpace(mantenimiento.Observaciones)
+                                                    ? "Sin observaciones"
+                                                    : mantenimiento.Observaciones)
+                    </dd>
+
+                    </dl>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@if (mantenimiento.Estado != "Finalizado")
+    {
+        <div class="modal fade"
+             id="editarMantenimiento-@mantenimiento.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            Editar Mantenimiento #@mantenimiento.Id
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <form asp-controller="Mantenimientos"
+                          asp-action="Edit"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="Id"
+                               value="@mantenimiento.Id" />
+
+                        <div class="modal-body p-4">
+                            <div class="row g-3">
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Vehículo
+                                    </label>
+
+                                    <select name="VehiculoId"
+                                            class="form-select"
+                                            required>
+
+                                        @foreach (var opcion in catalogos.Vehiculos)
+                                        {
+                                            if (opcion.Id == mantenimiento.VehiculoId)
+                                            {
+                                                <option value="@opcion.Id" selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Empleado responsable
+                                    </label>
+
+                                    <select name="EmpleadoId"
+                                            class="form-select"
+                                            required>
+
+                                        @foreach (var opcion in catalogos.Empleados)
+                                        {
+                                            if (opcion.Id == mantenimiento.EmpleadoId)
+                                            {
+                                                <option value="@opcion.Id" selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Tipo de mantenimiento
+                                    </label>
+
+                                    <input name="Tipo"
+                                           value="@mantenimiento.Tipo"
+                                           maxlength="100"
+                                           class="form-control"
+                                           required />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Fecha de inicio
+                                    </label>
+
+                                    <input name="FechaInicio"
+                                           type="datetime-local"
+                                           value="@mantenimiento.FechaInicio.ToString("yyyy-MM-ddTHH:mm")"
+                                           class="form-control"
+                                           readonly="@(mantenimiento.Estado == "En proceso" ? "readonly" : null)"
+                                           required />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Costo total ($)
+                                    </label>
+
+                                    <input name="CostoTotal"
+                                           type="number"
+                                           min="0"
+                                           max="100000000"
+                                           step="0.01"
+                                           value="@mantenimiento.CostoTotal.ToString("0.00", CultureInfo.InvariantCulture)"
+                                           class="form-control"
+                                           required />
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label">
+                                        Observaciones
+                                    </label>
+
+                                    <textarea name="Observaciones"
+                                      class="form-control"
+                                      maxlength="500"
+                                      rows="3">@mantenimiento.Observaciones</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (mantenimiento.Estado == "Pendiente")
+    {
+        <div class="modal fade"
+             id="iniciarMantenimiento-@mantenimiento.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            Iniciar Mantenimiento
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body text-center p-4">
+                        <h5>¿Deseas iniciar este mantenimiento?</h5>
+
+                        <p class="fw-bold mt-3">
+                            @mantenimiento.PlacaVehiculo
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            La fecha de inicio real se registrará al confirmar.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Mantenimientos"
+                              asp-action="Iniciar"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@mantenimiento.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                Sí, iniciar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (mantenimiento.Estado == "En proceso")
+    {
+        <div class="modal fade"
+             id="finalizarMantenimiento-@mantenimiento.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            Finalizar Mantenimiento
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body text-center p-4">
+                        <h5>¿Confirmas que terminó el mantenimiento?</h5>
+
+                        <p class="fw-bold mt-3">
+                            @mantenimiento.PlacaVehiculo
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            Se registrará la fecha de finalización
+                            y el mantenimiento quedará bloqueado para edición.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Mantenimientos"
+                              asp-action="Finalizar"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@mantenimiento.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Sí, finalizar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
