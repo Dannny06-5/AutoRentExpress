@@ -1,0 +1,412 @@
+@model List<AutoRentExpress.DTOs.MultaDto>
+
+@{
+    ViewData["Title"] = "Multas";
+
+    var pendientes = Model.Where(m => !m.Pagada).ToList();
+    var pagadas = Model.Where(m => m.Pagada).ToList();
+}
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Multas</h2>
+            <p class="text-muted mb-0">
+                Administración de cargos adicionales de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Multas"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nueva Multa
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de multas</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pendientes</h6>
+                    <h2 class="fw-bold text-warning">
+                        @pendientes.Count
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pagadas</h6>
+                    <h2 class="fw-bold text-success">
+                        @pagadas.Count
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Monto pendiente</h6>
+                    <h2 class="fw-bold text-danger">
+                        $@pendientes.Sum(m => m.Monto).ToString("N2")
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Contrato</th>
+                            <th>Cliente</th>
+                            <th>Motivo</th>
+                            <th>Monto</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var multa in Model)
+                        {
+                            <tr>
+                                <td>@multa.Id</td>
+
+                                <td class="fw-semibold">
+                                    @multa.NumeroContrato
+                                </td>
+
+                                <td>@multa.NombreCliente</td>
+
+                                <td>@multa.Motivo</td>
+
+                                <td>
+                                    $@multa.Monto.ToString("N2")
+                                </td>
+
+                                <td>
+                                    @multa.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    @if (multa.Pagada)
+                                    {
+                                        <span class="badge bg-success">
+                                            Pagada
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Pendiente
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#detalleMulta-@multa.Id">
+                                            Detalles
+                                        </button>
+
+                                        @if (!multa.Pagada)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editarMulta-@multa.Id">
+                                                Editar
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#pagarMulta-@multa.Id">
+                                                Marcar pagada
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay multas registradas.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var multa in Model)
+{
+    <div class="modal fade"
+         id="detalleMulta-@multa.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Detalles de la Multa #@multa.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Contrato</dt>
+                        <dd class="col-sm-7">
+                            @multa.NumeroContrato
+                        </dd>
+
+                        <dt class="col-sm-5">Cliente</dt>
+                        <dd class="col-sm-7">
+                            @multa.NombreCliente
+                        </dd>
+
+                        <dt class="col-sm-5">Motivo</dt>
+                        <dd class="col-sm-7">
+                            @multa.Motivo
+                        </dd>
+
+                        <dt class="col-sm-5">Monto</dt>
+                        <dd class="col-sm-7 fw-bold">
+                            $@multa.Monto.ToString("N2")
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha</dt>
+                        <dd class="col-sm-7">
+                            @multa.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">
+                            @(multa.Pagada ? "Pagada" : "Pendiente")
+                        </dd>
+                    </dl>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!multa.Pagada)
+    {
+        <div class="modal fade"
+             id="editarMulta-@multa.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            Editar Multa #@multa.Id
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <form asp-controller="Multas"
+                          asp-action="Edit"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="Id"
+                               value="@multa.Id" />
+
+                        <input type="hidden"
+                               name="ContratoId"
+                               value="@multa.ContratoId" />
+
+                        <div class="modal-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Contrato
+                                </label>
+
+                                <input value="@multa.NumeroContrato"
+                                       class="form-control"
+                                       readonly />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Motivo
+                                </label>
+
+                                <input name="Motivo"
+                                       value="@multa.Motivo"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Monto ($)
+                                </label>
+
+                                <input name="Monto"
+                                       type="number"
+                                       min="0.01"
+                                       max="100000000"
+                                       step="0.01"
+                                       value="@multa.Monto.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                       class="form-control"
+                                       required />
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Cancelar
+                            </button>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade"
+             id="pagarMulta-@multa.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            Confirmar Pago de Multa
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body p-4 text-center">
+                        <h5>¿Confirmas que esta multa ya fue pagada?</h5>
+
+                        <p class="fw-bold mt-3">
+                            @multa.Motivo
+                        </p>
+
+                        <p class="fs-4 text-success fw-bold">
+                            $@multa.Monto.ToString("N2")
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            Esta operación registrará el pago de forma
+                            administrativa. No generará automáticamente
+                            un movimiento en el módulo Pagos.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Multas"
+                              asp-action="MarcarPagada"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@multa.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Sí, confirmar pago
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

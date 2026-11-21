@@ -35,6 +35,8 @@ builder.Services.AddScoped<ISeguroRepository, SeguroRepository>();
 builder.Services.AddScoped<ISeguroService, SeguroService>();
 builder.Services.AddScoped<IPagoRepository, PagoRepository>();
 builder.Services.AddScoped<IPagoService, PagoService>();
+builder.Services.AddScoped<IMultaRepository, MultaRepository>();
+builder.Services.AddScoped<IMultaService, MultaService>();
 
 var app = builder.Build();
 
