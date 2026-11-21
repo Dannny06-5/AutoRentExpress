@@ -1,0 +1,341 @@
+@model List<AutoRentExpress.DTOs.SeguroDto>
+
+@{
+    ViewData["Title"] = "Seguros";
+}
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Seguros</h2>
+            <p class="text-muted mb-0">
+                Administración de coberturas de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Seguros"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Seguro
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["Exito"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de seguros</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Seguros activos</h6>
+                    <h2 class="fw-bold text-success">
+                        @Model.Count(s => s.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Seguros inactivos</h6>
+                    <h2 class="fw-bold text-secondary">
+                        @Model.Count(s => !s.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Cobertura</th>
+                            <th>Costo diario</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var seguro in Model)
+                        {
+                            <tr>
+                                <td>@seguro.Id</td>
+
+                                <td class="fw-semibold">
+                                    @seguro.Nombre
+                                </td>
+
+                                <td style="max-width:360px;white-space:normal;">
+                                    @if (!string.IsNullOrWhiteSpace(seguro.Cobertura))
+                                    {
+                                        @seguro.Cobertura
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">
+                                            Sin descripción
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    $@seguro.CostoDiario.ToString("N2")
+                                </td>
+
+                                <td>
+                                    @if (seguro.Activo)
+                                    {
+                                        <span class="badge bg-success">
+                                            Activo
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            Inactivo
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarSeguro-@seguro.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm @(seguro.Activo ? "btn-outline-danger" : "btn-outline-success")"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#estadoSeguro-@seguro.Id">
+                                            @(seguro.Activo ? "Desactivar" : "Activar")
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay seguros registrados.
+                </p>
+            }
+
+        </div>
+    </div>
+</div>
+
+@foreach (var seguro in Model)
+{
+    <div class="modal fade"
+         id="editarSeguro-@seguro.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Editar Seguro
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="Seguros"
+                      asp-action="Edit"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="Id"
+                           value="@seguro.Id" />
+
+                    <div class="modal-body p-4">
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Nombre del seguro
+                                </label>
+
+                                <input type="text"
+                                       name="Nombre"
+                                       value="@seguro.Nombre"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Cobertura
+                                </label>
+
+                                <textarea name="Cobertura"
+                                      class="form-control"
+                                      rows="4"
+                                      maxlength="500">@seguro.Cobertura</textarea>
+
+                                <div class="form-text">
+                                    Describe las coberturas y condiciones del seguro.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Costo diario ($)
+                                </label>
+
+                                <input name="CostoDiario"
+                                       type="number"
+                                       min="0"
+                                       max="1000000"
+                                       step="0.01"
+                                       value="@seguro.CostoDiario.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="estadoSeguro-@seguro.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header @(seguro.Activo ? "bg-danger" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        @(seguro.Activo ? "Desactivar Seguro" : "Activar Seguro")
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>
+                        ¿Deseas @(seguro.Activo ? "desactivar" : "activar") este seguro?
+                    </h5>
+
+                    <p class="fw-bold mt-3">
+                        @seguro.Nombre
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        El seguro permanecerá registrado en el sistema
+                        para conservar su historial.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-controller="Seguros"
+                          asp-action="CambiarEstado"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@seguro.Id" />
+
+                        <button type="submit"
+                                class="btn @(seguro.Activo ? "btn-danger" : "btn-success")">
+                            Sí, @(seguro.Activo ? "desactivar" : "activar")
+                        </button>
+
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}

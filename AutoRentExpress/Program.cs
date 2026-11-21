@@ -31,6 +31,8 @@ builder.Services.AddScoped<IContratoRepository, ContratoRepository>();
 builder.Services.AddScoped<IContratoService, ContratoService>();
 builder.Services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
 builder.Services.AddScoped<IEmpleadoService, EmpleadoService>();
+builder.Services.AddScoped<ISeguroRepository, SeguroRepository>();
+builder.Services.AddScoped<ISeguroService, SeguroService>();
 
 var app = builder.Build();
 
