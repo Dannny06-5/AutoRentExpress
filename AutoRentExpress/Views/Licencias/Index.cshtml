@@ -1,0 +1,396 @@
+@model List<AutoRentExpress.DTOs.LicenciaConducirDto>
+
+@{
+    ViewData["Title"] = "Licencias de Conducir";
+
+    var clientes = ViewBag.Clientes as List<AutoRentExpress.DTOs.LicenciaClienteDto>
+        ?? new List<AutoRentExpress.DTOs.LicenciaClienteDto>();
+
+    var hoy = DateTime.Today;
+
+    var vigentes = Model.Count(l =>
+        l.FechaEmision.Date <= hoy &&
+        l.FechaVencimiento.Date >= hoy);
+
+    var vencidas = Model.Count(l =>
+        l.FechaVencimiento.Date < hoy);
+
+    var futuras = Model.Count(l =>
+        l.FechaEmision.Date > hoy);
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Licencias</h2>
+            <p class="text-muted mb-0">
+                Control de licencias de conducir de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Licencias"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nueva Licencia
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de licencias</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Vigentes</h6>
+                    <h2 class="fw-bold text-success">@vigentes</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Vencidas</h6>
+                    <h2 class="fw-bold text-danger">@vencidas</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Próximas</h6>
+                    <h2 class="fw-bold text-secondary">@futuras</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Número</th>
+                            <th>Categoría</th>
+                            <th>País</th>
+                            <th>Emisión</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var licencia in Model)
+                        {
+                            var vigente =
+                            licencia.FechaEmision.Date <= hoy &&
+                            licencia.FechaVencimiento.Date >= hoy;
+
+                            <tr>
+                                <td>@licencia.Id</td>
+
+                                <td class="fw-semibold">
+                                    @licencia.NombreCliente
+                                </td>
+
+                                <td>@licencia.Numero</td>
+
+                                <td>@licencia.Categoria</td>
+
+                                <td>@licencia.PaisEmision</td>
+
+                                <td>
+                                    @licencia.FechaEmision.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @licencia.FechaVencimiento.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @if (vigente)
+                                    {
+                                        <span class="badge bg-success">
+                                            Vigente
+                                        </span>
+                                    }
+                                    else if (licencia.FechaVencimiento.Date < hoy)
+                                    {
+                                        <span class="badge bg-danger">
+                                            Vencida
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            Próxima
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#detalleLicencia-@licencia.Id">
+                                            Detalles
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarLicencia-@licencia.Id">
+                                            Editar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay licencias registradas.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var licencia in Model)
+{
+    <div class="modal fade"
+         id="detalleLicencia-@licencia.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Detalles de la Licencia #@licencia.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Cliente</dt>
+                        <dd class="col-sm-7">@licencia.NombreCliente</dd>
+
+                        <dt class="col-sm-5">Número de licencia</dt>
+                        <dd class="col-sm-7">@licencia.Numero</dd>
+
+                        <dt class="col-sm-5">Categoría</dt>
+                        <dd class="col-sm-7">@licencia.Categoria</dd>
+
+                        <dt class="col-sm-5">País de emisión</dt>
+                        <dd class="col-sm-7">@licencia.PaisEmision</dd>
+
+                        <dt class="col-sm-5">Fecha de emisión</dt>
+                        <dd class="col-sm-7">
+                            @licencia.FechaEmision.ToString("dd/MM/yyyy")
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de vencimiento</dt>
+                        <dd class="col-sm-7">
+                            @licencia.FechaVencimiento.ToString("dd/MM/yyyy")
+                        </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">
+                            @(licencia.FechaVencimiento.Date < hoy
+                                                    ? "Vencida"
+                                                    : licencia.FechaEmision.Date > hoy
+                                                    ? "Próxima"
+                                                    : "Vigente")
+                    </dd>
+                </dl>
+            </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="editarLicencia-@licencia.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Editar Licencia #@licencia.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="Licencias"
+                      asp-action="Edit"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="Id"
+                           value="@licencia.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Cliente</label>
+
+                                <select name="ClienteId"
+                                        class="form-select"
+                                        required>
+                                @foreach (var cliente in clientes)
+                                    {
+                                        if (cliente.Id == licencia.ClienteId)
+                                        {
+                                            <option value="@cliente.Id" selected>
+                                                @cliente.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@cliente.Id">
+                                                @cliente.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Número de licencia
+                                </label>
+
+                                <input name="Numero"
+                                       value="@licencia.Numero"
+                                       maxlength="40"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Categoría
+                                </label>
+
+                                <input name="Categoria"
+                                       value="@licencia.Categoria"
+                                       maxlength="20"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Fecha de emisión
+                                </label>
+
+                                <input name="FechaEmision"
+                                       type="date"
+                                       value="@licencia.FechaEmision.ToString("yyyy-MM-dd")"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Fecha de vencimiento
+                                </label>
+
+                                <input name="FechaVencimiento"
+                                       type="date"
+                                       value="@licencia.FechaVencimiento.ToString("yyyy-MM-dd")"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">
+                                    País de emisión
+                                </label>
+
+                                <input name="PaisEmision"
+                                       value="@licencia.PaisEmision"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

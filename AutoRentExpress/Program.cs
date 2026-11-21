@@ -43,6 +43,8 @@ builder.Services.AddScoped<IInspeccionRepository, InspeccionRepository>();
 builder.Services.AddScoped<IInspeccionService, InspeccionService>();
 builder.Services.AddScoped<ITarifaRepository, TarifaRepository>();
 builder.Services.AddScoped<ITarifaService, TarifaService>();
+builder.Services.AddScoped<ILicenciaConducirRepository, LicenciaConducirRepository>();
+builder.Services.AddScoped<ILicenciaConducirService, LicenciaConducirService>();
 
 var app = builder.Build();
 
