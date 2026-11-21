@@ -1,0 +1,345 @@
+@model List<AutoRentExpress.DTOs.EmpleadoDto>
+
+@{
+    ViewData["Title"] = "Empleados";
+
+    var sucursales = ViewBag.Sucursales as List<AutoRentExpress.DTOs.EmpleadoSucursalDto>
+        ?? new List<AutoRentExpress.DTOs.EmpleadoSucursalDto>();
+}
+
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Empleados</h2>
+            <p class="text-muted mb-0">
+                Administración del personal de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Empleados"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Empleado
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de empleados</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Empleados activos</h6>
+                    <h2 class="fw-bold text-success">
+                        @Model.Count(e => e.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Empleados inactivos</h6>
+                    <h2 class="fw-bold text-secondary">
+                        @Model.Count(e => !e.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Empleado</th>
+                            <th>Cargo</th>
+                            <th>Teléfono</th>
+                            <th>Sucursal</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var empleado in Model)
+                        {
+                            <tr>
+                                <td>@empleado.Id</td>
+
+                                <td class="fw-semibold">
+                                    @empleado.Nombres @empleado.Apellidos
+                                </td>
+
+                                <td>@empleado.Cargo</td>
+
+                                <td>
+                                    @(empleado.Telefono ?? "No registrado")
+                                </td>
+
+                                <td>@empleado.NombreSucursal</td>
+
+                                <td>
+                                    @if (empleado.Activo)
+                                    {
+                                        <span class="badge bg-success">
+                                            Activo
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            Inactivo
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarEmpleado-@empleado.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm @(empleado.Activo ? "btn-outline-danger" : "btn-outline-success")"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#estadoEmpleado-@empleado.Id">
+                                            @(empleado.Activo ? "Desactivar" : "Activar")
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay empleados registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var empleado in Model)
+{
+    <div class="modal fade"
+         id="editarEmpleado-@empleado.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Editar Empleado
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="Empleados"
+                      asp-action="Edit"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="Id" value="@empleado.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Nombres</label>
+                                <input type="text"
+                                       name="Nombres"
+                                       value="@empleado.Nombres"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Apellidos</label>
+                                <input type="text"
+                                       name="Apellidos"
+                                       value="@empleado.Apellidos"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Cargo</label>
+                                <input type="text"
+                                       name="Cargo"
+                                       value="@empleado.Cargo"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Teléfono</label>
+                                <input type="tel"
+                                       name="Telefono"
+                                       value="@empleado.Telefono"
+                                       class="form-control" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Sucursal</label>
+
+                                <select name="SucursalId"
+                                        class="form-select"
+                                        required>
+
+                                    @foreach (var sucursal in sucursales)
+                                    {
+                                        if (sucursal.Id == empleado.SucursalId)
+                                        {
+                                            <option value="@sucursal.Id" selected>
+                                                @sucursal.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@sucursal.Id">
+                                                @sucursal.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="estadoEmpleado-@empleado.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header @(empleado.Activo ? "bg-danger" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        @(empleado.Activo ? "Desactivar Empleado" : "Activar Empleado")
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>
+                        ¿Deseas @(empleado.Activo ? "desactivar" : "activar") este empleado?
+                    </h5>
+
+                    <p class="fw-bold mt-3">
+                        @empleado.Nombres @empleado.Apellidos
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        El registro permanecerá en el sistema
+                        y conservará su historial.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-controller="Empleados"
+                          asp-action="CambiarEstado"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@empleado.Id" />
+
+                        <button type="submit"
+                                class="btn @(empleado.Activo ? "btn-danger" : "btn-success")">
+                            Sí, @(empleado.Activo ? "desactivar" : "activar")
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,123 @@
+@model AutoRentExpress.DTOs.EmpleadoDto
+
+@{
+    ViewData["Title"] = "Editar Empleado";
+
+    var sucursales = ViewBag.Sucursales as List<AutoRentExpress.DTOs.EmpleadoSucursalDto>
+        ?? new List<AutoRentExpress.DTOs.EmpleadoSucursalDto>();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Editar Empleado</h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-controller="Empleados"
+                          asp-action="Edit"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input asp-for="Id" type="hidden" />
+
+                        <div asp-validation-summary="All"
+                             class="text-danger mb-3"></div>
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label asp-for="Nombres" class="form-label">
+                                    Nombres
+                                </label>
+                                <input asp-for="Nombres"
+                                       class="form-control"
+                                       maxlength="100"
+                                       required />
+                                <span asp-validation-for="Nombres"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Apellidos" class="form-label">
+                                    Apellidos
+                                </label>
+                                <input asp-for="Apellidos"
+                                       class="form-control"
+                                       maxlength="100"
+                                       required />
+                                <span asp-validation-for="Apellidos"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Cargo" class="form-label">
+                                    Cargo
+                                </label>
+                                <input asp-for="Cargo"
+                                       class="form-control"
+                                       maxlength="100"
+                                       required />
+                                <span asp-validation-for="Cargo"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Telefono" class="form-label">
+                                    Teléfono
+                                </label>
+                                <input asp-for="Telefono"
+                                       type="tel"
+                                       class="form-control" />
+                                <span asp-validation-for="Telefono"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="SucursalId" class="form-label">
+                                    Sucursal
+                                </label>
+                                <select asp-for="SucursalId"
+                                        class="form-select"
+                                        required>
+                                    <option value="0">
+                                        Selecciona una sucursal
+                                    </option>
+
+                                    @foreach (var sucursal in sucursales)
+                                    {
+                                        <option value="@sucursal.Id">
+                                            @sucursal.Nombre
+                                        </option>
+                                    }
+                                </select>
+                                <span asp-validation-for="SucursalId"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a asp-controller="Empleados"
+                               asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

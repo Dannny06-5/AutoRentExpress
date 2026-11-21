@@ -27,6 +27,10 @@ builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
 builder.Services.AddScoped<IVehiculoService, VehiculoService>();
 builder.Services.AddScoped<IReservaRepository, ReservaRepository>();
 builder.Services.AddScoped<IReservaService, ReservaService>();
+builder.Services.AddScoped<IContratoRepository, ContratoRepository>();
+builder.Services.AddScoped<IContratoService, ContratoService>();
+builder.Services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
+builder.Services.AddScoped<IEmpleadoService, EmpleadoService>();
 
 var app = builder.Build();
 

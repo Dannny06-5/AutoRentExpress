@@ -1,0 +1,109 @@
+@model AutoRentExpress.DTOs.ContratoDto
+
+@{
+    ViewData["Title"] = "Nuevo Contrato";
+
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.ContratoCatalogosDto
+        ?? new AutoRentExpress.DTOs.ContratoCatalogosDto();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm">
+
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Generar Nuevo Contrato</h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-controller="Contratos"
+                          asp-action="Create"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="All"
+                             class="text-danger mb-3"></div>
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+                                <label asp-for="ReservaId" class="form-label">
+                                    Reserva
+                                </label>
+
+                                <select asp-for="ReservaId"
+                                        class="form-select"
+                                        required>
+
+                                    <option value="0">
+                                        Selecciona una reserva pendiente
+                                    </option>
+
+                                    @foreach (var opcion in catalogos.Reservas)
+                                    {
+                                        <option value="@opcion.Id">
+                                            @opcion.Nombre
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="ReservaId"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="EmpleadoId" class="form-label">
+                                    Empleado responsable
+                                </label>
+
+                                <select asp-for="EmpleadoId"
+                                        class="form-select"
+                                        required>
+
+                                    <option value="0">
+                                        Selecciona un empleado
+                                    </option>
+
+                                    @foreach (var opcion in catalogos.Empleados)
+                                    {
+                                        <option value="@opcion.Id">
+                                            @opcion.Nombre
+                                        </option>
+                                    }
+                                </select>
+
+                                <span asp-validation-for="EmpleadoId"
+                                      class="text-danger"></span>
+                            </div>
+
+                        </div>
+
+                        <div class="alert alert-info mt-4 mb-0">
+                            El contrato tomará las fechas y el importe
+                            de la reserva seleccionada. El número de
+                            contrato se generará automáticamente.
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a asp-controller="Contratos"
+                               asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Generar Contrato
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

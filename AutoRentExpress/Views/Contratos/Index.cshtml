@@ -1,0 +1,234 @@
+@model List<AutoRentExpress.DTOs.ContratoDto>
+
+@{
+    ViewData["Title"] = "Contratos";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Contratos</h2>
+            <p class="text-muted mb-0">
+                Administración de contratos de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Contratos"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Contrato
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de contratos</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pendientes de entrega</h6>
+                    <h2 class="fw-bold text-warning">
+                        @Model.Count(c => c.Estado == "Pendiente de entrega")
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Importe de contratos</h6>
+                    <h2 class="fw-bold text-success">
+                        $@Model.Sum(c => c.TotalContrato).ToString("N2")
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Contrato</th>
+                            <th>Reserva</th>
+                            <th>Cliente</th>
+                            <th>Vehículo</th>
+                            <th>Firma</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var contrato in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">
+                                    @contrato.NumeroContrato
+                                </td>
+
+                                <td>#@contrato.ReservaId</td>
+
+                                <td>@contrato.NombreCliente</td>
+
+                                <td>
+                                    <div>@contrato.Vehiculo</div>
+                                    <small class="text-muted">
+                                        @contrato.PlacaVehiculo
+                                    </small>
+                                </td>
+
+                                <td>
+                                    @contrato.FechaFirma.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+
+                                <td>
+                                    $@contrato.TotalContrato.ToString("N2")
+                                </td>
+
+                                <td>
+                                    <span class="badge bg-warning text-dark">
+                                        @contrato.Estado
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#detalleContrato-@contrato.Id">
+                                        Detalles
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay contratos registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var contrato in Model)
+{
+    <div class="modal fade"
+         id="detalleContrato-@contrato.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Contrato @contrato.NumeroContrato
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5">Número de contrato</dt>
+                        <dd class="col-sm-7">
+                            @contrato.NumeroContrato
+                        </dd>
+
+                        <dt class="col-sm-5">Reserva</dt>
+                        <dd class="col-sm-7">
+                            #@contrato.ReservaId
+                        </dd>
+
+                        <dt class="col-sm-5">Cliente</dt>
+                        <dd class="col-sm-7">
+                            @contrato.NombreCliente
+                        </dd>
+
+                        <dt class="col-sm-5">Vehículo</dt>
+                        <dd class="col-sm-7">
+                            @contrato.Vehiculo
+                            (@contrato.PlacaVehiculo)
+                        </dd>
+
+                        <dt class="col-sm-5">Empleado responsable</dt>
+                        <dd class="col-sm-7">
+                            Empleado #@contrato.EmpleadoId
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de firma</dt>
+                        <dd class="col-sm-7">
+                            @contrato.FechaFirma.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Entrega programada</dt>
+                        <dd class="col-sm-7">
+                            @contrato.FechaEntrega.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Devolución prevista</dt>
+                        <dd class="col-sm-7">
+                            @contrato.FechaDevolucionPrevista.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Devolución real</dt>
+                        <dd class="col-sm-7">
+                            @(contrato.FechaDevolucionReal?.ToString("dd/MM/yyyy HH:mm")
+                                                    ?? "Pendiente")
+                    </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">
+                            @contrato.Estado
+                        </dd>
+
+                        <dt class="col-sm-5">Total del contrato</dt>
+                        <dd class="col-sm-7 fw-bold">
+                            $@contrato.TotalContrato.ToString("N2")
+                        </dd>
+                    </dl>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
