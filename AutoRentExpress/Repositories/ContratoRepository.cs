@@ -1,4 +1,5 @@
-﻿using AutoRentExpress.Data;
+﻿
+using AutoRentExpress.Data;
 using AutoRentExpress.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ namespace AutoRentExpress.Repositories
         {
             return await _context.Contratos
                 .AsNoTracking()
+                .Include(c => c.Empleado)
                 .Include(c => c.Reserva)
                     .ThenInclude(r => r.Cliente)
                 .Include(c => c.Reserva)
@@ -30,7 +32,7 @@ namespace AutoRentExpress.Repositories
         public async Task<Contrato?> ObtenerPorIdAsync(int id)
         {
             return await _context.Contratos
-                .AsNoTracking()
+                .Include(c => c.Empleado)
                 .Include(c => c.Reserva)
                     .ThenInclude(r => r.Cliente)
                 .Include(c => c.Reserva)
@@ -78,17 +80,56 @@ namespace AutoRentExpress.Repositories
                 .AnyAsync(c => c.ReservaId == reservaId);
         }
 
-        public async Task<bool> ExisteNumeroContratoAsync(
-            string numeroContrato)
+        public async Task<bool> ExisteNumeroContratoAsync(string numeroContrato)
         {
             return await _context.Contratos
                 .AnyAsync(c => c.NumeroContrato == numeroContrato);
+        }
+
+        public async Task<bool> ExisteOtroContratoEnCursoAsync(
+            int vehiculoId,
+            int excluirContratoId)
+        {
+            return await _context.Contratos.AnyAsync(c =>
+                c.Id != excluirContratoId &&
+                c.Estado == "En curso" &&
+                c.Reserva.VehiculoId == vehiculoId);
+        }
+
+        public async Task<bool> ExisteInspeccionAsync(
+            int contratoId,
+            string tipo)
+        {
+            return await _context.Inspecciones.AnyAsync(i =>
+                i.ContratoId == contratoId &&
+                i.Tipo == tipo);
+        }
+
+        public async Task<EstadoVehiculo?> ObtenerEstadoVehiculoAsync(
+            string nombre)
+        {
+            var estados = await _context.EstadosVehiculo
+                .AsNoTracking()
+                .ToListAsync();
+
+            return estados.FirstOrDefault(e =>
+                Normalizar(e.Nombre) == Normalizar(nombre));
         }
 
         public async Task AgregarAsync(Contrato contrato)
         {
             await _context.Contratos.AddAsync(contrato);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task GuardarCambiosAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        private static string Normalizar(string valor)
+        {
+            return valor.Trim().TrimEnd('.').Trim().ToUpperInvariant();
         }
     }
 }

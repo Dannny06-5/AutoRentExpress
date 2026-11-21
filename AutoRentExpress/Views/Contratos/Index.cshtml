@@ -2,6 +2,10 @@
 
 @{
     ViewData["Title"] = "Contratos";
+
+    var pendientes = Model.Count(c => c.Estado == "Pendiente de entrega");
+    var enCurso = Model.Count(c => c.Estado == "En curso");
+    var finalizados = Model.Count(c => c.Estado == "Finalizado");
 }
 
 <div class="container py-4">
@@ -31,8 +35,19 @@
         </div>
     }
 
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Total de contratos</h6>
@@ -41,24 +56,29 @@
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Pendientes de entrega</h6>
-                    <h2 class="fw-bold text-warning">
-                        @Model.Count(c => c.Estado == "Pendiente de entrega")
-                    </h2>
+                    <h2 class="fw-bold text-warning">@pendientes</h2>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h6 class="text-muted">Importe de contratos</h6>
-                    <h2 class="fw-bold text-success">
-                        $@Model.Sum(c => c.TotalContrato).ToString("N2")
-                    </h2>
+                    <h6 class="text-muted">En curso</h6>
+                    <h2 class="fw-bold text-primary">@enCurso</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Finalizados</h6>
+                    <h2 class="fw-bold text-success">@finalizados</h2>
                 </div>
             </div>
         </div>
@@ -109,18 +129,61 @@
                                 </td>
 
                                 <td>
-                                    <span class="badge bg-warning text-dark">
-                                        @contrato.Estado
-                                    </span>
+                                    @if (contrato.Estado == "Pendiente de entrega")
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Pendiente de entrega
+                                        </span>
+                                    }
+                                    else if (contrato.Estado == "En curso")
+                                    {
+                                        <span class="badge bg-primary">
+                                            En curso
+                                        </span>
+                                    }
+                                    else if (contrato.Estado == "Finalizado")
+                                    {
+                                        <span class="badge bg-success">
+                                            Finalizado
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            @contrato.Estado
+                                        </span>
+                                    }
                                 </td>
 
                                 <td>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-primary"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#detalleContrato-@contrato.Id">
-                                        Detalles
-                                    </button>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#detalleContrato-@contrato.Id">
+                                            Detalles
+                                        </button>
+
+                                        @if (contrato.Estado == "Pendiente de entrega")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#entregaContrato-@contrato.Id">
+                                                Confirmar entrega
+                                            </button>
+                                        }
+
+                                        @if (contrato.Estado == "En curso")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-success"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#devolucionContrato-@contrato.Id">
+                                                Confirmar devolución
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -161,7 +224,6 @@
 
                 <div class="modal-body p-4">
                     <dl class="row mb-0">
-
                         <dt class="col-sm-5">Número de contrato</dt>
                         <dd class="col-sm-7">
                             @contrato.NumeroContrato
@@ -193,7 +255,7 @@
                             @contrato.FechaFirma.ToString("dd/MM/yyyy HH:mm")
                         </dd>
 
-                        <dt class="col-sm-5">Entrega programada</dt>
+                        <dt class="col-sm-5">Fecha de entrega</dt>
                         <dd class="col-sm-7">
                             @contrato.FechaEntrega.ToString("dd/MM/yyyy HH:mm")
                         </dd>
@@ -231,4 +293,140 @@
             </div>
         </div>
     </div>
+
+@if (contrato.Estado == "Pendiente de entrega")
+    {
+        <div class="modal fade"
+             id="entregaContrato-@contrato.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            Confirmar entrega del vehículo
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body text-center p-4">
+                        <h5>¿Confirmas que entregaste este vehículo?</h5>
+
+                        <p class="fw-bold mt-3">
+                            @contrato.Vehiculo
+                            (@contrato.PlacaVehiculo)
+                        </p>
+
+                        <p>
+                            Cliente: @contrato.NombreCliente
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            Debe existir una inspección de entrega.
+                            Se registrará la fecha efectiva y el alquiler
+                            cambiará a En curso.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Contratos"
+                              asp-action="ConfirmarEntrega"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@contrato.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                Sí, confirmar entrega
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (contrato.Estado == "En curso")
+    {
+        <div class="modal fade"
+             id="devolucionContrato-@contrato.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            Confirmar devolución del vehículo
+                        </h5>
+
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body text-center p-4">
+                        <h5>¿Confirmas que recibiste el vehículo?</h5>
+
+                        <p class="fw-bold mt-3">
+                            @contrato.Vehiculo
+                            (@contrato.PlacaVehiculo)
+                        </p>
+
+                        <p>
+                            Cliente: @contrato.NombreCliente
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            Debe existir una inspección de devolución.
+                            Se registrará la fecha real y el alquiler
+                            pasará a Finalizado.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <form asp-controller="Contratos"
+                              asp-action="ConfirmarDevolucion"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@contrato.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Sí, confirmar devolución
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 }

@@ -1,3 +1,4 @@
+
 using AutoRentExpress.DTOs;
 using AutoRentExpress.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -64,12 +65,58 @@ namespace AutoRentExpress.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "No se pudo registrar el contrato. Comprueba que la reserva no tenga ya un contrato.");
+                    "No se pudo registrar el contrato. Comprueba que la reserva no tenga otro contrato.");
             }
 
             ViewBag.Catalogos = await _service.ObtenerCatalogosAsync();
 
             return View(dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarEntrega(int id)
+        {
+            try
+            {
+                await _service.ConfirmarEntregaAsync(id);
+
+                TempData["Exito"] =
+                    "Entrega confirmada. El alquiler está en curso.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (KeyNotFoundException)
+            {
+                TempData["Error"] = "El contrato no existe.";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarDevolucion(int id)
+        {
+            try
+            {
+                await _service.ConfirmarDevolucionAsync(id);
+
+                TempData["Exito"] =
+                    "Devolución confirmada. El alquiler ha finalizado.";
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+            catch (KeyNotFoundException)
+            {
+                TempData["Error"] = "El contrato no existe.";
+            }
+
+            return RedirectToAction(nameof(Index));
         }
     }
 }

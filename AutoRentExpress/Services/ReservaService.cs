@@ -192,6 +192,20 @@ namespace AutoRentExpress.Services
                     "Esta reserva ya está cancelada.");
             }
 
+            if (reserva.Estado == "En curso" ||
+                reserva.Estado == "Finalizada")
+            {
+                throw new InvalidOperationException(
+                    "No puedes cancelar una reserva cuyo alquiler ya comenzó o terminó.");
+            }
+
+            if (reserva.Estado != "Pendiente" &&
+                reserva.Estado != "Confirmada")
+            {
+                throw new InvalidOperationException(
+                    "El estado actual de la reserva no permite cancelarla.");
+            }
+
             reserva.Estado = "Cancelada";
 
             await _repository.GuardarCambiosAsync();
