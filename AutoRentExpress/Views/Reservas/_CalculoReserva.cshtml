@@ -1,0 +1,277 @@
+﻿<script>
+    (() => {
+        const formato = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD"
+        });
+
+        const urlDisponibles = '@Url.Action("Disponibles", "Reservas")';
+
+        function calcular(formulario) {
+            const vehiculo = formulario.querySelector(".selector-vehiculo");
+            const inicio = formulario.querySelector(".fecha-inicio");
+            const fin = formulario.querySelector(".fecha-fin");
+
+            if (!vehiculo || !inicio || !fin)
+                return;
+
+            const opcion = vehiculo.selectedOptions[0];
+            const tarifa = Number(opcion?.dataset.tarifa || 0);
+
+            const fechaInicio = new Date(inicio.value);
+            const fechaFin = new Date(fin.value);
+
+            let dias = 0;
+
+            if (
+                tarifa > 0 &&
+                Number.isFinite(fechaInicio.getTime()) &&
+                Number.isFinite(fechaFin.getTime()) &&
+                fechaFin > fechaInicio
+            ) {
+                dias = Math.max(
+                    1,
+                    Math.ceil(
+                        (fechaFin.getTime() - fechaInicio.getTime()) /
+                        86400000
+                    )
+                );
+            }
+
+            formulario.querySelector(".reserva-tarifa").textContent =
+                formato.format(tarifa);
+
+            formulario.querySelector(".reserva-dias").textContent =
+                dias.toString();
+
+            formulario.querySelector(".reserva-total").textContent =
+                formato.format(dias * tarifa);
+        }
+
+        function mostrarMensaje(formulario, mensaje, tipo) {
+            const vehiculo = formulario.querySelector(".selector-vehiculo");
+
+            let aviso = formulario.querySelector(".aviso-disponibilidad");
+
+            if (!aviso) {
+                aviso = document.createElement("div");
+                aviso.className = "aviso-disponibilidad small mt-2";
+                vehiculo.insertAdjacentElement("afterend", aviso);
+            }
+
+            aviso.className =
+                "aviso-disponibilidad small mt-2 " +
+                (tipo === "error" ? "text-danger" : "text-muted");
+
+            aviso.textContent = mensaje;
+            aviso.hidden = !mensaje;
+        }
+
+        function actualizarOpciones(formulario, vehiculos, valorAnterior) {
+            const selector = formulario.querySelector(".selector-vehiculo");
+
+            selector.replaceChildren();
+
+            const inicial = new Option(
+                vehiculos.length > 0
+                    ? "Selecciona un vehículo disponible"
+                    : "No hay vehículos disponibles",
+                "0"
+            );
+
+            selector.add(inicial);
+
+            vehiculos.forEach(vehiculo => {
+                const opcion = new Option(
+                    vehiculo.nombre,
+                    String(vehiculo.id)
+                );
+
+                opcion.dataset.tarifa = String(vehiculo.tarifaDiaria);
+                selector.add(opcion);
+            });
+
+            const existeAnterior = vehiculos.some(
+                v => String(v.id) === valorAnterior
+            );
+
+            selector.value = existeAnterior ? valorAnterior : "0";
+
+            if (vehiculos.length === 0) {
+                mostrarMensaje(
+                    formulario,
+                    "No hay vehículos disponibles para las fechas y sucursal seleccionadas.",
+                    "error"
+                );
+            } else if (valorAnterior !== "0" && !existeAnterior) {
+                mostrarMensaje(
+                    formulario,
+                    "El vehículo anterior no está disponible con estos datos. Selecciona otro.",
+                    "error"
+                );
+            } else {
+                mostrarMensaje(formulario, "", "normal");
+            }
+
+            calcular(formulario);
+        }
+
+        function inicializarFormulario(formulario) {
+            const selector = formulario.querySelector(".selector-vehiculo");
+            const inicio = formulario.querySelector(".fecha-inicio");
+            const fin = formulario.querySelector(".fecha-fin");
+            const sucursal = formulario.querySelector(
+                'select[name="SucursalRetiroId"]'
+            );
+            const idReserva = formulario.querySelector('input[name="Id"]');
+
+            if (!selector || !inicio || !fin || !sucursal)
+                return;
+
+            const opcionesOriginales = Array.from(selector.options).map(
+                opcion => ({
+                    id: opcion.value,
+                    nombre: opcion.text,
+                    tarifa: opcion.dataset.tarifa || "0"
+                })
+            );
+
+            let numeroSolicitud = 0;
+            let controladorActual = null;
+
+                function restaurarOpciones() {
+                    selector.replaceChildren(
+                    new Option("Selecciona primero la sucursal y las fechas", "0")
+                     );
+
+                        selector.value = "0";
+                        calcular(formulario);
+                        }
+
+            async function consultarDisponibilidad() {
+                numeroSolicitud++;
+
+                const solicitud = numeroSolicitud;
+
+                if (controladorActual)
+                    controladorActual.abort();
+
+                const fechaInicio = new Date(inicio.value);
+                const fechaFin = new Date(fin.value);
+
+                const fechasValidas =
+                    Number.isFinite(fechaInicio.getTime()) &&
+                    Number.isFinite(fechaFin.getTime()) &&
+                    fechaInicio < fechaFin;
+
+                if (!fechasValidas || Number(sucursal.value) <= 0) {
+                    restaurarOpciones();
+
+                    mostrarMensaje(
+                        formulario,
+                        "Selecciona una sucursal y un período de alquiler válido.",
+                        "normal"
+                    );
+
+                    return;
+                }
+
+                const valorAnterior = selector.value;
+                    selector.value = "0";
+                    calcular(formulario);
+
+                const parametros = new URLSearchParams({
+                    fechaInicio: inicio.value,
+                    fechaFin: fin.value,
+                    sucursalRetiroId: sucursal.value,
+                    reservaId: idReserva?.value || "0"
+                });
+
+                controladorActual = new AbortController();
+
+                selector.disabled = true;
+
+                mostrarMensaje(
+                    formulario,
+                    "Consultando vehículos disponibles...",
+                    "normal"
+                );
+
+                try {
+                    const respuesta = await fetch(
+                        `${urlDisponibles}?${parametros.toString()}`,
+                        {
+                            signal: controladorActual.signal,
+                            headers: {
+                                Accept: "application/json"
+                            }
+                        }
+                    );
+
+                    if (!respuesta.ok)
+                        throw new Error("No se pudo consultar la disponibilidad.");
+
+                    const vehiculos = await respuesta.json();
+
+                    if (solicitud !== numeroSolicitud)
+                        return;
+
+                    actualizarOpciones(
+                        formulario,
+                        vehiculos,
+                        valorAnterior
+                    );
+                } catch (error) {
+                    if (error.name === "AbortError")
+                        return;
+
+                    if (solicitud !== numeroSolicitud)
+                        return;
+
+                    selector.replaceChildren(
+                        new Option("No se pudo consultar la disponibilidad", "0")
+                    );
+
+                    mostrarMensaje(
+                        formulario,
+                        "No fue posible verificar la disponibilidad. Intenta cambiar las fechas nuevamente.",
+                        "error"
+                    );
+
+                    calcular(formulario);
+                } finally {
+                    if (solicitud === numeroSolicitud)
+                        selector.disabled = false;
+                }
+            }
+
+            selector.addEventListener("change", () => calcular(formulario));
+
+            [inicio, fin, sucursal].forEach(campo => {
+                campo.addEventListener("change", consultarDisponibilidad);
+            });
+
+            formulario.addEventListener("submit", evento => {
+                if (
+                    selector.disabled ||
+                    Number(selector.value) <= 0
+                ) {
+                    evento.preventDefault();
+
+                    mostrarMensaje(
+                        formulario,
+                        "Selecciona un vehículo disponible antes de guardar.",
+                        "error"
+                    );
+                }
+            });
+
+            calcular(formulario);
+            consultarDisponibilidad();
+        }
+
+        document.querySelectorAll(".form-reserva").forEach(
+            inicializarFormulario
+        );
+    })();
+</script>

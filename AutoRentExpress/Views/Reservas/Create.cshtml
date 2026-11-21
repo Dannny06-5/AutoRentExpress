@@ -1,0 +1,26 @@
+@model AutoRentExpress.DTOs.ReservaDto
+
+@{
+    ViewData["Title"] = "Nueva Reserva";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Registrar Nueva Reserva</h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <partial name="_Formulario" model="Model" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <partial name="_CalculoReserva" />
+}

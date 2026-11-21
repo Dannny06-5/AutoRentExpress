@@ -1,0 +1,147 @@
+﻿@model AutoRentExpress.DTOs.ReservaDto
+
+@using System.Globalization
+
+@{
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.ReservaCatalogosDto
+        ?? new AutoRentExpress.DTOs.ReservaCatalogosDto();
+
+    var editando = Model.Id > 0;
+    var accion = editando ? "Edit" : "Create";
+}
+
+<form asp-controller="Reservas"
+      asp-action="@accion"
+      method="post"
+      class="form-reserva">
+
+    @Html.AntiForgeryToken()
+
+    <input asp-for="Id" type="hidden" />
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="ClienteId" class="form-label">
+                Cliente
+            </label>
+            <select asp-for="ClienteId" class="form-select" required>
+                <option value="0">Selecciona un cliente</option>
+                @foreach (var opcion in catalogos.Clientes)
+                {
+                    <option value="@opcion.Id">@opcion.Nombre</option>
+                }
+            </select>
+            <span asp-validation-for="ClienteId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="VehiculoId" class="form-label">
+                Vehículo
+            </label>
+            <select asp-for="VehiculoId"
+                    class="form-select selector-vehiculo"
+                    required>
+                <option value="0">Selecciona un vehículo</option>
+                @foreach (var opcion in catalogos.Vehiculos)
+                {
+                    <option value="@opcion.Id"
+                            data-tarifa="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)">
+                        @opcion.Nombre
+                    </option>
+                }
+            </select>
+            <span asp-validation-for="VehiculoId" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="SucursalRetiroId" class="form-label">
+                Sucursal de retiro
+            </label>
+            <select asp-for="SucursalRetiroId" class="form-select" required>
+                <option value="0">Selecciona una sucursal</option>
+                @foreach (var opcion in catalogos.Sucursales)
+                {
+                    <option value="@opcion.Id">@opcion.Nombre</option>
+                }
+            </select>
+            <span asp-validation-for="SucursalRetiroId"
+                  class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="SucursalDevolucionId" class="form-label">
+                Sucursal de devolución
+            </label>
+            <select asp-for="SucursalDevolucionId" class="form-select" required>
+                <option value="0">Selecciona una sucursal</option>
+                @foreach (var opcion in catalogos.Sucursales)
+                {
+                    <option value="@opcion.Id">@opcion.Nombre</option>
+                }
+            </select>
+            <span asp-validation-for="SucursalDevolucionId"
+                  class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="FechaInicio" class="form-label">
+                Fecha y hora de retiro
+            </label>
+            <input asp-for="FechaInicio"
+                   asp-format="{0:yyyy-MM-ddTHH:mm}"
+                   type="datetime-local"
+                   class="form-control fecha-inicio"
+                   required />
+            <span asp-validation-for="FechaInicio" class="text-danger"></span>
+        </div>
+
+        <div class="col-md-6">
+            <label asp-for="FechaFin" class="form-label">
+                Fecha y hora de devolución
+            </label>
+            <input asp-for="FechaFin"
+                   asp-format="{0:yyyy-MM-ddTHH:mm}"
+                   type="datetime-local"
+                   class="form-control fecha-fin"
+                   required />
+            <span asp-validation-for="FechaFin" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="card bg-light border-0 mt-4">
+        <div class="card-body">
+            <h6 class="fw-bold">Resumen del alquiler</h6>
+
+            <div class="d-flex justify-content-between mb-2">
+                <span>Tarifa diaria</span>
+                <strong class="reserva-tarifa">$0.00</strong>
+            </div>
+
+            <div class="d-flex justify-content-between mb-2">
+                <span>Días facturables</span>
+                <strong class="reserva-dias">0</strong>
+            </div>
+
+            <hr />
+
+            <div class="d-flex justify-content-between">
+                <span class="fw-bold">Total estimado</span>
+                <strong class="fs-5 text-primary reserva-total">$0.00</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4">
+        <a asp-controller="Reservas"
+           asp-action="Index"
+           class="btn btn-secondary">
+            Cancelar
+        </a>
+
+        <button type="submit" class="btn btn-primary">
+            @(editando ? "Guardar Cambios" : "Registrar Reserva")
+        </button>
+    </div>
+</form>

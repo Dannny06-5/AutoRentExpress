@@ -1,0 +1,511 @@
+@model List<AutoRentExpress.DTOs.ReservaDto>
+
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Reservas";
+
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.ReservaCatalogosDto
+        ?? new AutoRentExpress.DTOs.ReservaCatalogosDto();
+
+    var pendientes = Model.Count(r => r.Estado == "Pendiente");
+    var canceladas = Model.Count(r => r.Estado == "Cancelada");
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Reservas</h2>
+            <p class="text-muted mb-0">
+                Administración de las reservas de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Reservas"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nueva Reserva
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de reservas</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pendientes</h6>
+                    <h2 class="fw-bold text-warning">@pendientes</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Canceladas</h6>
+                    <h2 class="fw-bold text-danger">@canceladas</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N.º</th>
+                            <th>Cliente</th>
+                            <th>Vehículo</th>
+                            <th>Retiro</th>
+                            <th>Devolución</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var reserva in Model)
+                        {
+                            <tr>
+                                <td class="fw-semibold">#@reserva.Id</td>
+                                <td>@reserva.NombreCliente</td>
+                                <td>
+                                    <div>@reserva.NombreVehiculo</div>
+                                    <small class="text-muted">
+                                        @reserva.PlacaVehiculo
+                                    </small>
+                                </td>
+                                <td>@reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@reserva.FechaFin.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@reserva.TotalEstimado.ToString("N2")</td>
+                                <td>
+                                    @if (reserva.Estado == "Cancelada")
+                                    {
+                                        <span class="badge bg-danger">Cancelada</span>
+                                    }
+                                    else if (reserva.Estado == "Pendiente")
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Pendiente
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">
+                                            @reserva.Estado
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#detalleReserva-@reserva.Id">
+                                            Detalles
+                                        </button>
+
+                                        @if (reserva.Estado != "Cancelada")
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editarReserva-@reserva.Id">
+                                                Editar
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#cancelarReserva-@reserva.Id">
+                                                Cancelar
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="text-center text-muted py-5">
+                    Todavía no hay reservas registradas.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var reserva in Model)
+{
+    <div class="modal fade"
+         id="detalleReserva-@reserva.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Detalles de la Reserva #@reserva.Id
+                    </h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Cliente</dt>
+                        <dd class="col-sm-7">@reserva.NombreCliente</dd>
+
+                        <dt class="col-sm-5">Vehículo</dt>
+                        <dd class="col-sm-7">
+                            @reserva.NombreVehiculo
+                            (@reserva.PlacaVehiculo)
+                        </dd>
+
+                        <dt class="col-sm-5">Sucursal de retiro</dt>
+                        <dd class="col-sm-7">
+                            @reserva.NombreSucursalRetiro
+                        </dd>
+
+                        <dt class="col-sm-5">Sucursal de devolución</dt>
+                        <dd class="col-sm-7">
+                            @reserva.NombreSucursalDevolucion
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de retiro</dt>
+                        <dd class="col-sm-7">
+                            @reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Fecha de devolución</dt>
+                        <dd class="col-sm-7">
+                            @reserva.FechaFin.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Registro</dt>
+                        <dd class="col-sm-7">
+                            @reserva.FechaRegistro.ToString("dd/MM/yyyy HH:mm")
+                        </dd>
+
+                        <dt class="col-sm-5">Estado</dt>
+                        <dd class="col-sm-7">@reserva.Estado</dd>
+
+                        <dt class="col-sm-5">Total estimado</dt>
+                        <dd class="col-sm-7 fw-bold">
+                            $@reserva.TotalEstimado.ToString("N2")
+                        </dd>
+                    </dl>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (reserva.Estado != "Cancelada")
+    {
+        <div class="modal fade"
+             id="editarReserva-@reserva.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            Editar Reserva #@reserva.Id
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <form asp-controller="Reservas"
+                          asp-action="Edit"
+                          method="post"
+                          class="form-reserva">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden" name="Id" value="@reserva.Id" />
+
+                        <div class="modal-body p-4">
+                            <div class="row g-3">
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Cliente</label>
+                                    <select name="ClienteId"
+                                            class="form-select"
+                                            required>
+                                        @foreach (var opcion in catalogos.Clientes)
+                                        {
+                                            if (opcion.Id == reserva.ClienteId)
+                                            {
+                                                <option value="@opcion.Id" selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">Vehículo</label>
+                                    <select name="VehiculoId"
+                                            class="form-select selector-vehiculo"
+                                            required>
+                                        @foreach (var opcion in catalogos.Vehiculos)
+                                        {
+                                            if (opcion.Id == reserva.VehiculoId)
+                                            {
+                                                <option value="@opcion.Id"
+                                                        data-tarifa="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)"
+                                                        selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id"
+                                                        data-tarifa="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Sucursal de retiro
+                                    </label>
+                                    <select name="SucursalRetiroId"
+                                            class="form-select"
+                                            required>
+                                        @foreach (var opcion in catalogos.Sucursales)
+                                        {
+                                            if (opcion.Id == reserva.SucursalRetiroId)
+                                            {
+                                                <option value="@opcion.Id" selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Sucursal de devolución
+                                    </label>
+                                    <select name="SucursalDevolucionId"
+                                            class="form-select"
+                                            required>
+                                        @foreach (var opcion in catalogos.Sucursales)
+                                        {
+                                            if (opcion.Id == reserva.SucursalDevolucionId)
+                                            {
+                                                <option value="@opcion.Id" selected>
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@opcion.Id">
+                                                    @opcion.Nombre
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Fecha y hora de retiro
+                                    </label>
+                                    <input name="FechaInicio"
+                                           type="datetime-local"
+                                           value="@reserva.FechaInicio.ToString("yyyy-MM-ddTHH:mm")"
+                                           class="form-control fecha-inicio"
+                                           required />
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        Fecha y hora de devolución
+                                    </label>
+                                    <input name="FechaFin"
+                                           type="datetime-local"
+                                           value="@reserva.FechaFin.ToString("yyyy-MM-ddTHH:mm")"
+                                           class="form-control fecha-fin"
+                                           required />
+                                </div>
+
+                            </div>
+
+                            <div class="card bg-light border-0 mt-4">
+                                <div class="card-body">
+                                    <h6 class="fw-bold">Resumen del alquiler</h6>
+
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Tarifa diaria</span>
+                                        <strong class="reserva-tarifa">$0.00</strong>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Días facturables</span>
+                                        <strong class="reserva-dias">0</strong>
+                                    </div>
+
+                                    <hr />
+
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total estimado</span>
+                                        <strong class="reserva-total fs-5 text-primary">
+                                            $0.00
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    data-bs-dismiss="modal">
+                                Cerrar
+                            </button>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade"
+             id="cancelarReserva-@reserva.Id"
+             tabindex="-1"
+             aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            Cancelar Reserva
+                        </h5>
+                        <button type="button"
+                                class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"
+                                aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body p-4 text-center">
+                        <h5>
+                            ¿Deseas cancelar la reserva #@reserva.Id?
+                        </h5>
+
+                        <p class="fw-semibold mt-3">
+                            @reserva.NombreCliente
+                        </p>
+
+                        <p class="text-muted mb-0">
+                            Se conservará el registro en el historial,
+                            pero la reserva dejará de bloquear esas fechas.
+                        </p>
+                    </div>
+
+                    <div class="modal-footer justify-content-center">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Volver
+                        </button>
+
+                        <form asp-controller="Reservas"
+                              asp-action="Cancelar"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="id"
+                                   value="@reserva.Id" />
+
+                            <button type="submit" class="btn btn-danger">
+                                Sí, cancelar reserva
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    <partial name="_CalculoReserva" />
+}

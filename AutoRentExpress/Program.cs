@@ -25,6 +25,8 @@ builder.Services.AddScoped<IEstadoVehiculoRepository, EstadoVehiculoRepository>(
 builder.Services.AddScoped<IEstadoVehiculoService, EstadoVehiculoService>();
 builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
 builder.Services.AddScoped<IVehiculoService, VehiculoService>();
+builder.Services.AddScoped<IReservaRepository, ReservaRepository>();
+builder.Services.AddScoped<IReservaService, ReservaService>();
 
 var app = builder.Build();
 
