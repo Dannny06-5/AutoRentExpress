@@ -1,0 +1,203 @@
+@model List<AutoRentExpress.DTOs.EstadoVehiculoDto>
+
+@{
+    ViewData["Title"] = "Estados de Vehículo";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Estados de Vehículo</h2>
+            <p class="text-muted">Administración de los estados de la flota</p>
+        </div>
+
+        <a asp-controller="EstadosVehiculo"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Estado
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h6 class="text-muted">Total de estados</h6>
+            <h2 class="fw-bold">@Model.Count</h2>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre del estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var estado in Model)
+                        {
+                            <tr>
+                                <td>@estado.Id</td>
+                                <td>@estado.Nombre</td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarEstado-@estado.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#eliminarEstado-@estado.Id">
+                                            Eliminar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-muted text-center py-4">
+                    Todavía no hay estados registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var estado in Model)
+{
+    <div class="modal fade"
+         id="editarEstado-@estado.Id"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar Estado de Vehículo</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="EstadosVehiculo"
+                      asp-action="Edit"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="Id" value="@estado.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre del estado</label>
+                            <input type="text"
+                                   name="Nombre"
+                                   value="@estado.Nombre"
+                                   class="form-control"
+                                   maxlength="100"
+                                   required />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="eliminarEstado-@estado.Id"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Eliminar Estado</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>¿Deseas eliminar este estado?</h5>
+
+                    <p class="fw-bold mt-3">
+                        @estado.Nombre
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        No se podrá eliminar si tiene vehículos asociados.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-controller="EstadosVehiculo"
+                          asp-action="Delete"
+                          method="post">
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@estado.Id" />
+
+                        <button type="submit"
+                                class="btn btn-danger">
+                            Sí, eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

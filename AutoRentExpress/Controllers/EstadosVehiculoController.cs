@@ -1,150 +1,111 @@
-
+using AutoRentExpress.DTOs;
+using AutoRentExpress.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using AutoRentExpress.Models;
-using AutoRentExpress.Data;
+using System.ComponentModel.DataAnnotations;
 
-public class EstadosVehiculoController : Controller
+namespace AutoRentExpress.Controllers
 {
-    private readonly AppDbContext _context;
-
-    public EstadosVehiculoController(AppDbContext context)
+    public class EstadosVehiculoController : Controller
     {
-        _context = context;
-    }
+        private readonly IEstadoVehiculoService _service;
 
-    // GET: ESTADOVEHICULOS
-    public async Task<IActionResult> Index()    
-    {
-        return View(await _context.EstadosVehiculo.ToListAsync());
-    }
-
-    // GET: ESTADOVEHICULOS/Details/5
-    public async Task<IActionResult> Details(int? id)
-    {
-        if (id == null)
+        public EstadosVehiculoController(IEstadoVehiculoService service)
         {
-            return NotFound();
+            _service = service;
         }
 
-        var estadovehiculo = await _context.EstadosVehiculo
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (estadovehiculo == null)
+        public async Task<IActionResult> Index()
         {
-            return NotFound();
+            return View(await _service.ObtenerTodosAsync());
         }
 
-        return View(estadovehiculo);
-    }
-
-    // GET: ESTADOVEHICULOS/Create
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    // POST: ESTADOVEHICULOS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Nombre,Vehiculos")] EstadoVehiculo estadovehiculo)
-    {
-        if (ModelState.IsValid)
+        [HttpGet]
+        public IActionResult Create()
         {
-            _context.Add(estadovehiculo);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(estadovehiculo);
-    }
-
-    // GET: ESTADOVEHICULOS/Edit/5
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
+            return View(new EstadoVehiculoDto());
         }
 
-        var estadovehiculo = await _context.EstadosVehiculo.FindAsync(id);
-        if (estadovehiculo == null)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(EstadoVehiculoDto dto)
         {
-            return NotFound();
-        }
-        return View(estadovehiculo);
-    }
+            if (!ModelState.IsValid)
+                return View(dto);
 
-    // POST: ESTADOVEHICULOS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Nombre,Vehiculos")] EstadoVehiculo estadovehiculo)
-    {
-        if (id != estadovehiculo.Id)
+            try
+            {
+                await _service.CrearAsync(dto);
+                TempData["Exito"] = "Estado registrado correctamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(nameof(dto.Nombre), ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+
+            return View(dto);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
         {
-            return NotFound();
+            var estado = await _service.ObtenerPorIdAsync(id);
+
+            return estado == null ? NotFound() : View(estado);
         }
 
-        if (ModelState.IsValid)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(EstadoVehiculoDto dto)
+        {
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            try
+            {
+                await _service.ActualizarAsync(dto);
+                TempData["Exito"] = "Estado actualizado correctamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(nameof(dto.Nombre), ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+
+            return View(dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                _context.Update(estadovehiculo);
-                await _context.SaveChangesAsync();
+                await _service.EliminarAsync(id);
+                TempData["Exito"] = "Estado eliminado correctamente.";
             }
-            catch (DbUpdateConcurrencyException)
+            catch (InvalidOperationException ex)
             {
-                if (!EstadoVehiculoExists(estadovehiculo.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                TempData["Error"] = ex.Message;
             }
+            catch (KeyNotFoundException)
+            {
+                TempData["Error"] = "El estado no existe.";
+            }
+
             return RedirectToAction(nameof(Index));
         }
-        return View(estadovehiculo);
-    }
-
-    // GET: ESTADOVEHICULOS/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var estadovehiculo = await _context.EstadosVehiculo
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (estadovehiculo == null)
-        {
-            return NotFound();
-        }
-
-        return View(estadovehiculo);
-    }
-
-    // POST: ESTADOVEHICULOS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
-    {
-        var estadovehiculo = await _context.EstadosVehiculo.FindAsync(id);
-        if (estadovehiculo != null)
-        {
-            _context.EstadosVehiculo.Remove(estadovehiculo);
-        }
-
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
-    }
-
-    private bool EstadoVehiculoExists(int? id)
-    {
-        return _context.EstadosVehiculo.Any(e => e.Id == id);
     }
 }

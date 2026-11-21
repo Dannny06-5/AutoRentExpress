@@ -21,6 +21,8 @@ builder.Services.AddScoped<IModeloRepository, ModeloRepository>();
 builder.Services.AddScoped<IModeloService, ModeloService>();
 builder.Services.AddScoped<ISucursalRepository, SucursalRepository>();
 builder.Services.AddScoped<ISucursalService, SucursalService>();
+builder.Services.AddScoped<IEstadoVehiculoRepository, EstadoVehiculoRepository>();
+builder.Services.AddScoped<IEstadoVehiculoService, EstadoVehiculoService>();
 
 var app = builder.Build();
 
