@@ -1,0 +1,465 @@
+@model List<AutoRentExpress.DTOs.VehiculoDto>
+
+@{
+    ViewData["Title"] = "Vehículos";
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.VehiculoCatalogosDto
+        ?? new AutoRentExpress.DTOs.VehiculoCatalogosDto();
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Vehículos</h2>
+            <p class="text-muted mb-0">
+                Administración de la flota de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Vehiculos"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nuevo Vehículo
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de vehículos</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Vehículos activos</h6>
+                    <h2 class="fw-bold text-success">
+                        @Model.Count(v => v.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Vehículos inactivos</h6>
+                    <h2 class="fw-bold text-secondary">
+                        @Model.Count(v => !v.Activo)
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Placa</th>
+                            <th>Modelo</th>
+                            <th>Categoría</th>
+                            <th>Sucursal</th>
+                            <th>Estado</th>
+                            <th>Tarifa diaria</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var vehiculo in Model)
+                        {
+                            <tr>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(vehiculo.ImagenUrl))
+                                    {
+                                        <img src="@vehiculo.ImagenUrl"
+                                             alt="@vehiculo.NombreModelo"
+                                             style="width:85px;height:60px;object-fit:cover;border-radius:8px;"
+                                             loading="lazy" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Sin imagen</span>
+                                    }
+                                </td>
+
+                                <td class="fw-semibold">@vehiculo.Placa</td>
+                                <td>@vehiculo.NombreModelo</td>
+                                <td>@vehiculo.NombreCategoria</td>
+                                <td>@vehiculo.NombreSucursal</td>
+
+                                <td>
+                                    <span class="badge bg-primary">
+                                        @vehiculo.NombreEstado
+                                    </span>
+                                </td>
+
+                                <td>@vehiculo.TarifaDiaria.ToString("N2")</td>
+
+                                <td>
+                                    @if (vehiculo.Activo)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarVehiculo-@vehiculo.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm @(vehiculo.Activo ? "btn-outline-danger" : "btn-outline-success")"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#estadoVehiculo-@vehiculo.Id">
+                                            @(vehiculo.Activo ? "Desactivar" : "Activar")
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay vehículos registrados.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var vehiculo in Model)
+{
+    <div class="modal fade"
+         id="editarVehiculo-@vehiculo.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar Vehículo</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="Vehiculos"
+                      asp-action="Edit"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="Id" value="@vehiculo.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label class="form-label">Placa</label>
+                                <input name="Placa"
+                                       value="@vehiculo.Placa"
+                                       class="form-control"
+                                       maxlength="20"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Marca y modelo</label>
+                                <select name="ModeloId"
+                                        class="form-select"
+                                        required>
+                                    @foreach (var opcion in catalogos.Modelos)
+                                    {
+                                        if (opcion.Id == vehiculo.ModeloId)
+                                        {
+                                            <option value="@opcion.Id" selected>
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opcion.Id">
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Categoría</label>
+                                <select name="CategoriaVehiculoId"
+                                        class="form-select"
+                                        required>
+                                    @foreach (var opcion in catalogos.Categorias)
+                                    {
+                                        if (opcion.Id == vehiculo.CategoriaVehiculoId)
+                                        {
+                                            <option value="@opcion.Id" selected>
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opcion.Id">
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="EstadoVehiculoId"
+                                        class="form-select"
+                                        required>
+                                    @foreach (var opcion in catalogos.Estados)
+                                    {
+                                        if (opcion.Id == vehiculo.EstadoVehiculoId)
+                                        {
+                                            <option value="@opcion.Id" selected>
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opcion.Id">
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Sucursal</label>
+                                <select name="SucursalId"
+                                        class="form-select"
+                                        required>
+                                    @foreach (var opcion in catalogos.Sucursales)
+                                    {
+                                        if (opcion.Id == vehiculo.SucursalId)
+                                        {
+                                            <option value="@opcion.Id" selected>
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opcion.Id">
+                                                @opcion.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Color</label>
+                                <input name="Color"
+                                       value="@vehiculo.Color"
+                                       class="form-control"
+                                       maxlength="50"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Año</label>
+                                <input name="Anio"
+                                       type="number"
+                                       value="@vehiculo.Anio"
+                                       min="1950"
+                                       max="2100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Kilometraje</label>
+                                <input name="Kilometraje"
+                                       type="number"
+                                       value="@vehiculo.Kilometraje"
+                                       min="0"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Capacidad de pasajeros</label>
+                                <input name="CapacidadPasajeros"
+                                       type="number"
+                                       value="@vehiculo.CapacidadPasajeros"
+                                       min="1"
+                                       max="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Tarifa diaria</label>
+                                <input name="TarifaDiaria"
+                                       type="number"
+                                       min="0.01"
+                                       step="0.01"
+                                       value="@vehiculo.TarifaDiaria.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Fotografía actual</label>
+
+                                @if (!string.IsNullOrWhiteSpace(vehiculo.ImagenUrl))
+                                {
+                                    <div class="mb-3">
+                                        <img src="@vehiculo.ImagenUrl"
+                                             alt="@vehiculo.NombreModelo"
+                                             class="img-thumbnail"
+                                             style="max-width:220px;max-height:140px;object-fit:cover;" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted small">
+                                        Este vehículo todavía no tiene fotografía.
+                                    </p>
+                                }
+
+                                <label class="form-label">Cambiar fotografía</label>
+
+                                <input name="ImagenArchivo"
+                                       type="file"
+                                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                       class="form-control" />
+
+                                <div class="form-text">
+                                    Selecciona una nueva imagen para reemplazar la anterior.
+                                    Máximo 5 MB.
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="estadoVehiculo-@vehiculo.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header @(vehiculo.Activo ? "bg-danger" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        @(vehiculo.Activo ? "Desactivar Vehículo" : "Activar Vehículo")
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>
+                        ¿Deseas @(vehiculo.Activo ? "desactivar" : "activar") este vehículo?
+                    </h5>
+
+                    <p class="fw-bold mt-3">@vehiculo.Placa</p>
+
+                    <p class="text-muted mb-0">
+                        El vehículo permanecerá registrado en el sistema.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-controller="Vehiculos"
+                          asp-action="CambiarEstado"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@vehiculo.Id" />
+
+                        <button type="submit"
+                                class="btn @(vehiculo.Activo ? "btn-danger" : "btn-success")">
+                            Sí, @(vehiculo.Activo ? "desactivar" : "activar")
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

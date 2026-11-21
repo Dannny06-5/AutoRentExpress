@@ -1,0 +1,209 @@
+@model AutoRentExpress.DTOs.VehiculoDto
+
+@{
+    ViewData["Title"] = "Editar Vehículo";
+    var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.VehiculoCatalogosDto
+        ?? new AutoRentExpress.DTOs.VehiculoCatalogosDto();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="mb-0">Editar Vehículo</h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form asp-controller="Vehiculos"
+                          asp-action="Edit"
+                          method="post"
+                          enctype="multipart/form-data">
+
+                        @Html.AntiForgeryToken()
+
+                        <input asp-for="Id" type="hidden" />
+
+                        @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div asp-validation-summary="All"
+                                 class="alert alert-danger"></div>
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="Placa" class="form-label"></label>
+                                <input asp-for="Placa"
+                                       class="form-control"
+                                       maxlength="20" />
+                                <span asp-validation-for="Placa" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="ModeloId" class="form-label">
+                                    Marca y modelo
+                                </label>
+                                <select asp-for="ModeloId" class="form-select">
+                                    <option value="0">Selecciona un modelo</option>
+                                    @foreach (var opcion in catalogos.Modelos)
+                                    {
+                                        <option value="@opcion.Id">@opcion.Nombre</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="ModeloId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="CategoriaVehiculoId" class="form-label">
+                                    Categoría
+                                </label>
+                                <select asp-for="CategoriaVehiculoId" class="form-select">
+                                    <option value="0">Selecciona una categoría</option>
+                                    @foreach (var opcion in catalogos.Categorias)
+                                    {
+                                        <option value="@opcion.Id">@opcion.Nombre</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="CategoriaVehiculoId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="EstadoVehiculoId" class="form-label">
+                                    Estado
+                                </label>
+                                <select asp-for="EstadoVehiculoId" class="form-select">
+                                    <option value="0">Selecciona un estado</option>
+                                    @foreach (var opcion in catalogos.Estados)
+                                    {
+                                        <option value="@opcion.Id">@opcion.Nombre</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="EstadoVehiculoId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="SucursalId" class="form-label">
+                                    Sucursal
+                                </label>
+                                <select asp-for="SucursalId" class="form-select">
+                                    <option value="0">Selecciona una sucursal</option>
+                                    @foreach (var opcion in catalogos.Sucursales)
+                                    {
+                                        <option value="@opcion.Id">@opcion.Nombre</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="SucursalId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Color" class="form-label"></label>
+                                <input asp-for="Color"
+                                       class="form-control"
+                                       maxlength="50" />
+                                <span asp-validation-for="Color" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Anio" class="form-label">Año</label>
+                                <input asp-for="Anio"
+                                       type="number"
+                                       min="1950"
+                                       max="2100"
+                                       class="form-control" />
+                                <span asp-validation-for="Anio" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="Kilometraje" class="form-label"></label>
+                                <input asp-for="Kilometraje"
+                                       type="number"
+                                       min="0"
+                                       class="form-control" />
+                                <span asp-validation-for="Kilometraje" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="CapacidadPasajeros" class="form-label">
+                                    Capacidad de pasajeros
+                                </label>
+                                <input asp-for="CapacidadPasajeros"
+                                       type="number"
+                                       min="1"
+                                       max="100"
+                                       class="form-control" />
+                                <span asp-validation-for="CapacidadPasajeros"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="TarifaDiaria" class="form-label">
+                                    Tarifa diaria
+                                </label>
+                                <input asp-for="TarifaDiaria"
+                                       type="number"
+                                       min="0.01"
+                                       step="0.01"
+                                       class="form-control" />
+                                <span asp-validation-for="TarifaDiaria"
+                                      class="text-danger"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Fotografía actual</label>
+
+                                @if (!string.IsNullOrWhiteSpace(Model.ImagenUrl))
+                                {
+                                    <div class="mb-2">
+                                        <img src="@Model.ImagenUrl"
+                                             alt="Fotografía del vehículo"
+                                             class="img-thumbnail"
+                                             style="max-width:240px;max-height:150px;object-fit:cover;" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">
+                                        Este vehículo no tiene fotografía.
+                                    </p>
+                                }
+
+                                <label asp-for="ImagenArchivo" class="form-label">
+                                    Seleccionar nueva fotografía
+                                </label>
+
+                                <input asp-for="ImagenArchivo"
+                                       type="file"
+                                       accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                       class="form-control" />
+
+                                <div class="form-text">
+                                    Si no seleccionas una fotografía nueva,
+                                    se conservará la actual.
+                                </div>
+
+                                <span asp-validation-for="ImagenArchivo"
+                                      class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a asp-controller="Vehiculos"
+                               asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancelar
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
