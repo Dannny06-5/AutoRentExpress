@@ -19,6 +19,8 @@ builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
 builder.Services.AddScoped<IMarcaService, MarcaService>();
 builder.Services.AddScoped<IModeloRepository, ModeloRepository>();
 builder.Services.AddScoped<IModeloService, ModeloService>();
+builder.Services.AddScoped<ISucursalRepository, SucursalRepository>();
+builder.Services.AddScoped<ISucursalService, SucursalService>();
 
 var app = builder.Build();
 

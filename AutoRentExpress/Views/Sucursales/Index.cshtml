@@ -1,0 +1,224 @@
+@model List<AutoRentExpress.DTOs.SucursalDto>
+
+@{
+    ViewData["Title"] = "Sucursales";
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Sucursales</h2>
+            <p class="text-muted">Administración de sedes de AutoRent Express</p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">+ Nueva Sucursal</a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success">@TempData["Exito"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de sucursales</h6>
+                    <h2>@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Sucursales activas</h6>
+                    <h2 class="text-success">@Model.Count(s => s.Activa)</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Sucursales inactivas</h6>
+                    <h2 class="text-secondary">@Model.Count(s => !s.Activa)</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Dirección</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sucursal in Model)
+                        {
+                            <tr>
+                                <td>@sucursal.Id</td>
+                                <td>@sucursal.Nombre</td>
+                                <td>@sucursal.Direccion</td>
+                                <td>@(sucursal.Telefono ?? "Sin teléfono")</td>
+                                <td>
+                                    @if (sucursal.Activa)
+                                    {
+                                        <span class="badge bg-success">Activa</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactiva</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarSucursal-@sucursal.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm @(sucursal.Activa ? "btn-outline-danger" : "btn-outline-success")"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#estadoSucursal-@sucursal.Id">
+                                            @(sucursal.Activa ? "Desactivar" : "Activar")
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-3">
+                    Todavía no hay sucursales registradas.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var sucursal in Model)
+{
+    <div class="modal fade"
+         id="editarSucursal-@sucursal.Id"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar Sucursal</h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" value="@sucursal.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input name="Nombre"
+                                   value="@sucursal.Nombre"
+                                   maxlength="100"
+                                   class="form-control"
+                                   required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <input name="Direccion"
+                                   value="@sucursal.Direccion"
+                                   maxlength="250"
+                                   class="form-control"
+                                   required />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono</label>
+                            <input name="Telefono"
+                                   value="@sucursal.Telefono"
+                                   maxlength="30"
+                                   class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="estadoSucursal-@sucursal.Id"
+         tabindex="-1"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header @(sucursal.Activa ? "bg-danger" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        @(sucursal.Activa ? "Desactivar Sucursal" : "Activar Sucursal")
+                    </h5>
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>
+                        ¿Deseas @(sucursal.Activa ? "desactivar" : "activar") esta sucursal?
+                    </h5>
+                    <p class="fw-bold mt-3">@sucursal.Nombre</p>
+                    <p class="text-muted mb-0">
+                        El registro permanecerá guardado en el sistema.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-action="CambiarEstado" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@sucursal.Id" />
+                        <button type="submit"
+                                class="btn @(sucursal.Activa ? "btn-danger" : "btn-success")">
+                            Sí, @(sucursal.Activa ? "desactivar" : "activar")
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

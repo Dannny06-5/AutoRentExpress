@@ -1,150 +1,107 @@
-
+using AutoRentExpress.DTOs;
+using AutoRentExpress.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using AutoRentExpress.Models;
-using AutoRentExpress.Data;
+using System.ComponentModel.DataAnnotations;
 
-public class SucursalesController : Controller
+namespace AutoRentExpress.Controllers
 {
-    private readonly AppDbContext _context;
-
-    public SucursalesController(AppDbContext context)
+    public class SucursalesController : Controller
     {
-        _context = context;
-    }
+        private readonly ISucursalService _service;
 
-    // GET: SUCURSALS
-    public async Task<IActionResult> Index()    
-    {
-        return View(await _context.Sucursales.ToListAsync());
-    }
-
-    // GET: SUCURSALS/Details/5
-    public async Task<IActionResult> Details(int? id)
-    {
-        if (id == null)
+        public SucursalesController(ISucursalService service)
         {
-            return NotFound();
+            _service = service;
         }
 
-        var sucursal = await _context.Sucursales
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (sucursal == null)
+        public async Task<IActionResult> Index()
         {
-            return NotFound();
+            return View(await _service.ObtenerTodosAsync());
         }
 
-        return View(sucursal);
-    }
-
-    // GET: SUCURSALS/Create
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    // POST: SUCURSALS/Create
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("Id,Nombre,Direccion,Telefono,Activa,Empleados,Vehiculos")] Sucursal sucursal)
-    {
-        if (ModelState.IsValid)
+        [HttpGet]
+        public IActionResult Create()
         {
-            _context.Add(sucursal);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-        return View(sucursal);
-    }
-
-    // GET: SUCURSALS/Edit/5
-    public async Task<IActionResult> Edit(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
+            return View(new SucursalDto());
         }
 
-        var sucursal = await _context.Sucursales.FindAsync(id);
-        if (sucursal == null)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(SucursalDto dto)
         {
-            return NotFound();
-        }
-        return View(sucursal);
-    }
+            if (!ModelState.IsValid)
+                return View(dto);
 
-    // POST: SUCURSALS/Edit/5
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int? id, [Bind("Id,Nombre,Direccion,Telefono,Activa,Empleados,Vehiculos")] Sucursal sucursal)
-    {
-        if (id != sucursal.Id)
+            try
+            {
+                await _service.CrearAsync(dto);
+                TempData["Exito"] = "Sucursal registrada correctamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(nameof(dto.Nombre), ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+
+            return View(dto);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
         {
-            return NotFound();
+            var sucursal = await _service.ObtenerPorIdAsync(id);
+
+            return sucursal == null ? NotFound() : View(sucursal);
         }
 
-        if (ModelState.IsValid)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(SucursalDto dto)
+        {
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            try
+            {
+                await _service.ActualizarAsync(dto);
+                TempData["Exito"] = "Sucursal actualizada correctamente.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(nameof(dto.Nombre), ex.Message);
+            }
+            catch (ValidationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
+
+            return View(dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarEstado(int id)
         {
             try
             {
-                _context.Update(sucursal);
-                await _context.SaveChangesAsync();
+                await _service.CambiarEstadoAsync(id);
+                TempData["Exito"] = "Estado de la sucursal actualizado.";
             }
-            catch (DbUpdateConcurrencyException)
+            catch (KeyNotFoundException)
             {
-                if (!SucursalExists(sucursal.Id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                TempData["Error"] = "La sucursal no existe.";
             }
+
             return RedirectToAction(nameof(Index));
         }
-        return View(sucursal);
-    }
-
-    // GET: SUCURSALS/Delete/5
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null)
-        {
-            return NotFound();
-        }
-
-        var sucursal = await _context.Sucursales
-            .FirstOrDefaultAsync(m => m.Id == id);
-        if (sucursal == null)
-        {
-            return NotFound();
-        }
-
-        return View(sucursal);
-    }
-
-    // POST: SUCURSALS/Delete/5
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int? id)
-    {
-        var sucursal = await _context.Sucursales.FindAsync(id);
-        if (sucursal != null)
-        {
-            _context.Sucursales.Remove(sucursal);
-        }
-
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
-    }
-
-    private bool SucursalExists(int? id)
-    {
-        return _context.Sucursales.Any(e => e.Id == id);
     }
 }
