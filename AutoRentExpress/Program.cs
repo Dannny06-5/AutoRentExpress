@@ -41,6 +41,8 @@ builder.Services.AddScoped<IMantenimientoRepository, MantenimientoRepository>();
 builder.Services.AddScoped<IMantenimientoService, MantenimientoService>();
 builder.Services.AddScoped<IInspeccionRepository, InspeccionRepository>();
 builder.Services.AddScoped<IInspeccionService, InspeccionService>();
+builder.Services.AddScoped<ITarifaRepository, TarifaRepository>();
+builder.Services.AddScoped<ITarifaService, TarifaService>();
 
 var app = builder.Build();
 

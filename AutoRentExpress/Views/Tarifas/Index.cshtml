@@ -1,0 +1,397 @@
+@model List<AutoRentExpress.DTOs.TarifaDto>
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Tarifas";
+
+    var categorias = ViewBag.Categorias as List<AutoRentExpress.DTOs.TarifaCategoriaDto>
+        ?? new List<AutoRentExpress.DTOs.TarifaCategoriaDto>();
+
+    var hoy = DateTime.Today;
+
+    var vigentes = Model.Count(t =>
+        t.Activa &&
+        t.VigenteDesde.Date <= hoy &&
+        (!t.VigenteHasta.HasValue || t.VigenteHasta.Value.Date >= hoy));
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold">Gestión de Tarifas</h2>
+            <p class="text-muted mb-0">
+                Administración de precios y vigencias de AutoRent Express
+            </p>
+        </div>
+
+        <a asp-controller="Tarifas"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Nueva Tarifa
+        </a>
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            @TempData["Exito"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total de tarifas</h6>
+                    <h2 class="fw-bold">@Model.Count</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Tarifas activas</h6>
+                    <h2 class="fw-bold text-success">
+                        @Model.Count(t => t.Activa)
+                    </h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Vigentes hoy</h6>
+                    <h2 class="fw-bold text-primary">@vigentes</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Tarifas inactivas</h6>
+                    <h2 class="fw-bold text-secondary">
+                        @Model.Count(t => !t.Activa)
+                    </h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio diario</th>
+                            <th>Desde</th>
+                            <th>Hasta</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var tarifa in Model)
+                        {
+                            var estaVigente =
+                            tarifa.Activa &&
+                            tarifa.VigenteDesde.Date <= hoy &&
+                            (!tarifa.VigenteHasta.HasValue ||
+                            tarifa.VigenteHasta.Value.Date >= hoy);
+
+                            <tr>
+                                <td>@tarifa.Id</td>
+
+                                <td class="fw-semibold">
+                                    @tarifa.Nombre
+                                </td>
+
+                                <td>@tarifa.NombreCategoria</td>
+
+                                <td>
+                                    $@tarifa.PrecioDiario.ToString("N2")
+                                </td>
+
+                                <td>
+                                    @tarifa.VigenteDesde.ToString("dd/MM/yyyy")
+                                </td>
+
+                                <td>
+                                    @(tarifa.VigenteHasta?.ToString("dd/MM/yyyy")
+                                                                    ?? "Sin fecha límite")
+                            </td>
+
+                                <td>
+                                @if (!tarifa.Activa)
+                                    {
+                                        <span class="badge bg-secondary">
+                                            Inactiva
+                                        </span>
+                                    }
+                                    else if (estaVigente)
+                                    {
+                                        <span class="badge bg-success">
+                                            Vigente
+                                        </span>
+                                    }
+                                    else if (tarifa.VigenteDesde.Date > hoy)
+                                    {
+                                        <span class="badge bg-info text-dark">
+                                            Próxima
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            Vencida
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editarTarifa-@tarifa.Id">
+                                            Editar
+                                        </button>
+
+                                        <button type="button"
+                                                class="btn btn-sm @(tarifa.Activa ? "btn-outline-danger" : "btn-outline-success")"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#estadoTarifa-@tarifa.Id">
+                                            @(tarifa.Activa ? "Desactivar" : "Activar")
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <p class="text-center text-muted py-4">
+                    Todavía no hay tarifas registradas.
+                </p>
+            }
+        </div>
+    </div>
+</div>
+
+@foreach (var tarifa in Model)
+{
+    <div class="modal fade"
+         id="editarTarifa-@tarifa.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        Editar Tarifa #@tarifa.Id
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <form asp-controller="Tarifas"
+                      asp-action="Edit"
+                      method="post">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="Id"
+                           value="@tarifa.Id" />
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Categoría
+                                </label>
+
+                                <select name="CategoriaVehiculoId"
+                                        class="form-select"
+                                        required>
+
+                                    @foreach (var categoria in categorias)
+                                    {
+                                        if (categoria.Id == tarifa.CategoriaVehiculoId)
+                                        {
+                                            <option value="@categoria.Id" selected>
+                                                @categoria.Nombre
+                                            </option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@categoria.Id">
+                                                @categoria.Nombre
+                                            </option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Nombre
+                                </label>
+
+                                <input name="Nombre"
+                                       value="@tarifa.Nombre"
+                                       maxlength="100"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Precio diario ($)
+                                </label>
+
+                                <input name="PrecioDiario"
+                                       type="number"
+                                       min="0.01"
+                                       max="1000000"
+                                       step="0.01"
+                                       value="@tarifa.PrecioDiario.ToString("0.00", CultureInfo.InvariantCulture)"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Vigente desde
+                                </label>
+
+                                <input name="VigenteDesde"
+                                       type="date"
+                                       value="@tarifa.VigenteDesde.ToString("yyyy-MM-dd")"
+                                       class="form-control"
+                                       required />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">
+                                    Vigente hasta
+                                </label>
+
+                                <input name="VigenteHasta"
+                                       type="date"
+                                       value="@tarifa.VigenteHasta?.ToString("yyyy-MM-dd")"
+                                       class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade"
+         id="estadoTarifa-@tarifa.Id"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header @(tarifa.Activa ? "bg-danger" : "bg-success") text-white">
+                    <h5 class="modal-title">
+                        @(tarifa.Activa ? "Desactivar Tarifa" : "Activar Tarifa")
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body p-4 text-center">
+                    <h5>
+                        ¿Deseas @(tarifa.Activa ? "desactivar" : "activar") esta tarifa?
+                    </h5>
+
+                    <p class="fw-bold mt-3">
+                        @tarifa.Nombre
+                    </p>
+
+                    <p>
+                        $@tarifa.PrecioDiario.ToString("N2") por día
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        La tarifa permanecerá en el historial.
+                        Esta acción no modificará reservas ni contratos existentes.
+                    </p>
+                </div>
+
+                <div class="modal-footer justify-content-center">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <form asp-controller="Tarifas"
+                          asp-action="CambiarEstado"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@tarifa.Id" />
+
+                        <button type="submit"
+                                class="btn @(tarifa.Activa ? "btn-danger" : "btn-success")">
+                            Sí, @(tarifa.Activa ? "desactivar" : "activar")
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
