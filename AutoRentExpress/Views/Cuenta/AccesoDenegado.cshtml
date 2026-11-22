@@ -1,0 +1,28 @@
+﻿@{
+    ViewData["Title"] = "Acceso denegado";
+}
+
+<div class="container py-5">
+    <div class="card border-0 shadow-sm mx-auto"
+         style="max-width: 500px;">
+        <div class="card-body text-center p-5">
+            <div class="text-danger mb-3"
+                 style="font-size: 48px;">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+
+            <h2 class="fw-bold">Acceso denegado</h2>
+
+            <p class="text-muted">
+                Tu usuario no tiene permisos para acceder
+                a esta sección de AutoRent Express.
+            </p>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="btn btn-primary">
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
+</div>
