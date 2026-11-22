@@ -1,6 +1,7 @@
 ﻿@model AutoRentExpress.DTOs.ReservaDto
 
 @using System.Globalization
+@using System.Text.Json
 
 @{
     var catalogos = ViewBag.Catalogos as AutoRentExpress.DTOs.ReservaCatalogosDto
@@ -8,6 +9,16 @@
 
     var editando = Model.Id > 0;
     var accion = editando ? "Edit" : "Create";
+
+    var diasOriginales = Model.FechaFin > Model.FechaInicio
+        ? Math.Max(1, (int)Math.Ceiling((Model.FechaFin - Model.FechaInicio).TotalDays))
+        : 1;
+
+    var precioHistorico = editando
+        ? Math.Max(0m, (Model.TotalEstimado - Model.CostoSeguro) / diasOriginales)
+        : 0m;
+
+    var tarifasJson = JsonSerializer.Serialize(catalogos.Tarifas);
 }
 
 <form asp-controller="Reservas"
@@ -22,6 +33,7 @@
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
     <div class="row g-3">
+
         <div class="col-md-6">
             <label asp-for="ClienteId" class="form-label">
                 Cliente
@@ -53,7 +65,9 @@
                 @foreach (var opcion in catalogos.Vehiculos)
                 {
                     <option value="@opcion.Id"
-                            data-tarifa="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)">
+                            data-tarifa="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)"
+                            data-tarifa-normal="@opcion.TarifaDiaria.ToString(CultureInfo.InvariantCulture)"
+                            data-categoria="@opcion.CategoriaVehiculoId">
                         @opcion.Nombre
                     </option>
                 }
@@ -136,7 +150,31 @@
         @if (!editando)
         {
             <div class="col-12">
-                <label asp-for="SeguroId" class="form-label fw-semibold">
+                <label asp-for="TarifaId"
+                       class="form-label fw-semibold">
+                    Tarifa del alquiler
+                </label>
+
+                <select asp-for="TarifaId"
+                        class="form-select selector-tarifa">
+                    <option value="">
+                        Tarifa normal del vehículo
+                    </option>
+                </select>
+
+                <div class="form-text">
+                    La tarifa normal se aplica por defecto.
+                    Puedes seleccionar una tarifa especial vigente
+                    si el cliente desea utilizarla.
+                </div>
+
+                <span asp-validation-for="TarifaId"
+                      class="text-danger"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="SeguroId"
+                       class="form-label fw-semibold">
                     Seguro adicional
                 </label>
 
@@ -164,7 +202,26 @@
         }
         else
         {
-            <div class="col-12">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">
+                    Tarifa del alquiler
+                </label>
+
+                <input type="text"
+                       class="form-control"
+                       value="$@precioHistorico.ToString("N2") por día"
+                       readonly />
+
+                <input type="hidden"
+                       class="tarifa-historica"
+                       value="@precioHistorico.ToString(CultureInfo.InvariantCulture)" />
+
+                <div class="form-text">
+                    El precio acordado se conserva al editar esta reserva.
+                </div>
+            </div>
+
+            <div class="col-md-6">
                 <label class="form-label fw-semibold">
                     Seguro contratado
                 </label>
@@ -180,8 +237,8 @@
 
                 <div class="form-text">
                     El seguro contratado se conserva al editar.
-                    Si cambias las fechas, su importe se ajustará usando
-                    el precio diario original.
+                    Si cambias las fechas, su importe se ajustará
+                    usando el precio diario original.
                 </div>
             </div>
         }
@@ -189,10 +246,12 @@
 
     <div class="card bg-light border-0 mt-4">
         <div class="card-body">
-            <h6 class="fw-bold">Resumen del alquiler</h6>
+            <h6 class="fw-bold mb-3">
+                Resumen del alquiler
+            </h6>
 
             <div class="d-flex justify-content-between mb-2">
-                <span>Tarifa diaria del vehículo</span>
+                <span>Tarifa diaria aplicada</span>
                 <strong class="reserva-tarifa">$0.00</strong>
             </div>
 
@@ -213,8 +272,9 @@
 
             <hr />
 
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between align-items-center">
                 <span class="fw-bold">Total estimado</span>
+
                 <strong class="fs-5 text-primary reserva-total">
                     $0.00
                 </strong>
@@ -234,3 +294,163 @@
         </button>
     </div>
 </form>
+
+@if (!editando)
+{
+    <script>
+        (() => {
+            const tarifas = @Html.Raw(tarifasJson);
+
+            function inicializarTarifas() {
+                const formulario = document.querySelector(".form-reserva");
+
+                if (!formulario) return;
+
+                const vehiculo = formulario.querySelector(".selector-vehiculo");
+                const selectorTarifa = formulario.querySelector(".selector-tarifa");
+                const inicio = formulario.querySelector(".fecha-inicio");
+                const fin = formulario.querySelector(".fecha-fin");
+
+                if (!vehiculo || !selectorTarifa || !inicio || !fin) {
+                    return;
+                }
+
+                const tarifaInicial = selectorTarifa.value;
+                let primeraCarga = true;
+
+                function obtenerFecha(valor) {
+                    if (!valor) return null;
+
+                    const fecha = new Date(valor);
+
+                    if (Number.isNaN(fecha.getTime())) {
+                        return null;
+                    }
+
+                    return fecha;
+                }
+
+                function fechaLocal(fecha) {
+                    return [
+                        fecha.getFullYear(),
+                        String(fecha.getMonth() + 1).padStart(2, "0"),
+                        String(fecha.getDate()).padStart(2, "0")
+                    ].join("-");
+                }
+
+                function actualizarTarifas() {
+                    const opcionVehiculo =
+                        vehiculo.options[vehiculo.selectedIndex];
+
+                    const categoria = Number(
+                        opcionVehiculo?.dataset.categoria || 0
+                    );
+
+                    const fechaInicio = obtenerFecha(inicio.value);
+                    const fechaFin = obtenerFecha(fin.value);
+
+                    const seleccionAnterior = primeraCarga
+                        ? tarifaInicial
+                        : selectorTarifa.value;
+
+                    primeraCarga = false;
+
+                    selectorTarifa.innerHTML = "";
+
+                    const opcionNormal = document.createElement("option");
+
+                    opcionNormal.value = "";
+                    opcionNormal.textContent =
+                        "Tarifa normal del vehículo";
+
+                    selectorTarifa.appendChild(opcionNormal);
+
+                    if (!categoria || !fechaInicio || !fechaFin ||
+                        fechaFin <= fechaInicio) {
+                        selectorTarifa.value = "";
+                        selectorTarifa.dispatchEvent(
+                            new Event("change", { bubbles: true })
+                        );
+                        return;
+                    }
+
+                    const ultimoDia = new Date(fechaFin);
+
+                    if (
+                        ultimoDia.getHours() === 0 &&
+                        ultimoDia.getMinutes() === 0 &&
+                        ultimoDia.getSeconds() === 0
+                    ) {
+                        ultimoDia.setDate(ultimoDia.getDate() - 1);
+                    }
+
+                    const primerDiaTexto = fechaLocal(fechaInicio);
+                    const ultimoDiaTexto = fechaLocal(ultimoDia);
+
+                    tarifas.forEach(t => {
+                        if (t.CategoriaVehiculoId !== categoria) {
+                            return;
+                        }
+
+                        const vigenteDesde =
+                            t.VigenteDesde.substring(0, 10);
+
+                        const vigenteHasta = t.VigenteHasta
+                            ? t.VigenteHasta.substring(0, 10)
+                            : null;
+
+                        if (vigenteDesde > primerDiaTexto) {
+                            return;
+                        }
+
+                        if (
+                            vigenteHasta &&
+                            vigenteHasta < ultimoDiaTexto
+                        ) {
+                            return;
+                        }
+
+                        const opcion = document.createElement("option");
+
+                        opcion.value = String(t.Id);
+                        opcion.dataset.precio = String(t.PrecioDiario);
+
+                        opcion.textContent =
+                            `${t.Nombre} - $${Number(t.PrecioDiario).toFixed(2)} por día`;
+
+                        selectorTarifa.appendChild(opcion);
+                    });
+
+                    const existeSeleccion = Array.from(
+                        selectorTarifa.options
+                    ).some(opcion =>
+                        opcion.value === seleccionAnterior
+                    );
+
+                    selectorTarifa.value = existeSeleccion
+                        ? seleccionAnterior
+                        : "";
+
+                    selectorTarifa.dispatchEvent(
+                        new Event("change", { bubbles: true })
+                    );
+                }
+
+                vehiculo.addEventListener("change", actualizarTarifas);
+                inicio.addEventListener("change", actualizarTarifas);
+                fin.addEventListener("change", actualizarTarifas);
+
+                actualizarTarifas();
+            }
+
+            if (document.readyState === "loading") {
+                document.addEventListener(
+                    "DOMContentLoaded",
+                    inicializarTarifas
+                );
+            } else {
+                inicializarTarifas();
+            }
+        })();
+    </script>
+}

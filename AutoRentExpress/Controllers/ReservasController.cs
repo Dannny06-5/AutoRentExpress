@@ -55,7 +55,8 @@ namespace AutoRentExpress.Controllers
             return View(new ReservaDto
             {
                 FechaInicio = inicio,
-                FechaFin = inicio.AddDays(1)
+                FechaFin = inicio.AddDays(1),
+                TarifaId = null
             });
         }
 
@@ -75,7 +76,8 @@ namespace AutoRentExpress.Controllers
             {
                 await _service.CrearAsync(dto);
 
-                TempData["Exito"] = "Reserva registrada correctamente.";
+                TempData["Exito"] =
+                    "Reserva registrada correctamente.";
 
                 return RedirectToAction(nameof(Index));
             }
@@ -130,7 +132,8 @@ namespace AutoRentExpress.Controllers
             {
                 await _service.ActualizarAsync(dto);
 
-                TempData["Exito"] = "Reserva actualizada correctamente.";
+                TempData["Exito"] =
+                    "Reserva actualizada correctamente.";
 
                 return RedirectToAction(nameof(Index));
             }
@@ -156,7 +159,8 @@ namespace AutoRentExpress.Controllers
             {
                 await _service.CancelarAsync(id);
 
-                TempData["Exito"] = "Reserva cancelada correctamente.";
+                TempData["Exito"] =
+                    "Reserva cancelada correctamente.";
             }
             catch (InvalidOperationException ex)
             {
@@ -164,7 +168,8 @@ namespace AutoRentExpress.Controllers
             }
             catch (KeyNotFoundException)
             {
-                TempData["Error"] = "La reserva no existe.";
+                TempData["Error"] =
+                    "La reserva no existe.";
             }
 
             return RedirectToAction(nameof(Index));

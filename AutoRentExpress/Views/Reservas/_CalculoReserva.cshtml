@@ -16,14 +16,39 @@
             }
         }
 
+        function obtenerDias(inicio, fin) {
+            const fechaInicio = new Date(inicio);
+            const fechaFin = new Date(fin);
+
+            if (
+                !Number.isFinite(fechaInicio.getTime()) ||
+                !Number.isFinite(fechaFin.getTime()) ||
+                fechaFin <= fechaInicio
+            ) {
+                return 0;
+            }
+
+            return Math.max(
+                1,
+                Math.ceil(
+                    (fechaFin.getTime() - fechaInicio.getTime()) /
+                    86400000
+                )
+            );
+        }
+
         function calcular(formulario) {
             const vehiculo = formulario.querySelector(".selector-vehiculo");
+            const selectorTarifa = formulario.querySelector(".selector-tarifa");
             const seguro = formulario.querySelector(".selector-seguro");
             const inicio = formulario.querySelector(".fecha-inicio");
             const fin = formulario.querySelector(".fecha-fin");
             const idReserva = formulario.querySelector('input[name="Id"]');
             const costoExistente = formulario.querySelector(
                 ".seguro-costo-existente"
+            );
+            const tarifaHistorica = formulario.querySelector(
+                ".tarifa-historica"
             );
 
             if (!vehiculo || !inicio || !fin) {
@@ -32,29 +57,40 @@
 
             const opcionVehiculo = vehiculo.selectedOptions[0];
 
-            const tarifa = Number(
-                opcionVehiculo?.dataset.tarifa || 0
+            const tarifaNormal = Number(
+                opcionVehiculo?.dataset.tarifaNormal ||
+                opcionVehiculo?.dataset.tarifa ||
+                0
             );
 
-            const fechaInicio = new Date(inicio.value);
-            const fechaFin = new Date(fin.value);
+            const idVehiculo = Number(vehiculo.value || 0);
+            const reservaExistente = Number(idReserva?.value || 0) > 0;
 
-            let dias = 0;
+            let tarifa = tarifaNormal;
 
             if (
-                tarifa > 0 &&
-                Number.isFinite(fechaInicio.getTime()) &&
-                Number.isFinite(fechaFin.getTime()) &&
-                fechaFin > fechaInicio
+                reservaExistente &&
+                tarifaHistorica &&
+                idVehiculo === Number(formulario.dataset.vehiculoOriginal)
             ) {
-                dias = Math.max(
-                    1,
-                    Math.ceil(
-                        (fechaFin.getTime() - fechaInicio.getTime()) /
-                        86400000
-                    )
-                );
+                tarifa = Number(tarifaHistorica.value || 0);
             }
+
+            if (selectorTarifa && selectorTarifa.value) {
+                const opcionTarifa = selectorTarifa.selectedOptions[0];
+
+                const precioEspecial = Number(
+                    opcionTarifa?.dataset.precio || 0
+                );
+
+                if (precioEspecial > 0) {
+                    tarifa = precioEspecial;
+                }
+            }
+
+            const dias = tarifa > 0
+                ? obtenerDias(inicio.value, fin.value)
+                : 0;
 
             const subtotalVehiculo = dias * tarifa;
 
@@ -68,10 +104,7 @@
                 );
 
                 subtotalSeguro = dias * precioSeguro;
-            } else if (
-                Number(idReserva?.value || 0) > 0 &&
-                costoExistente
-            ) {
+            } else if (reservaExistente && costoExistente) {
                 const diasOriginales = Number(
                     costoExistente.dataset.dias || 0
                 );
@@ -96,7 +129,7 @@
             escribir(
                 formulario,
                 ".reserva-dias",
-                dias.toString()
+                String(dias)
             );
 
             escribir(
@@ -121,6 +154,10 @@
         function mostrarMensaje(formulario, mensaje, tipo) {
             const vehiculo = formulario.querySelector(".selector-vehiculo");
 
+            if (!vehiculo) {
+                return;
+            }
+
             let aviso = formulario.querySelector(".aviso-disponibilidad");
 
             if (!aviso) {
@@ -137,7 +174,12 @@
             aviso.hidden = !mensaje;
         }
 
-        function actualizarOpciones(formulario, vehiculos, valorAnterior) {
+        function actualizarOpciones(
+            formulario,
+            vehiculos,
+            valorAnterior,
+            categorias
+        ) {
             const selector = formulario.querySelector(".selector-vehiculo");
 
             selector.replaceChildren();
@@ -155,8 +197,13 @@
                     String(vehiculo.id)
                 );
 
-                opcion.dataset.tarifa = String(
-                    vehiculo.tarifaDiaria
+                const precio = Number(vehiculo.tarifaDiaria || 0);
+
+                opcion.dataset.tarifa = String(precio);
+                opcion.dataset.tarifaNormal = String(precio);
+
+                opcion.dataset.categoria = String(
+                    categorias.get(String(vehiculo.id)) || 0
                 );
 
                 selector.add(opcion);
@@ -184,18 +231,22 @@
                 mostrarMensaje(formulario, "", "normal");
             }
 
+            selector.dispatchEvent(
+                new Event("change", { bubbles: true })
+            );
+
             calcular(formulario);
         }
 
         function inicializarFormulario(formulario) {
             const selector = formulario.querySelector(".selector-vehiculo");
+            const selectorTarifa = formulario.querySelector(".selector-tarifa");
             const seguro = formulario.querySelector(".selector-seguro");
             const inicio = formulario.querySelector(".fecha-inicio");
             const fin = formulario.querySelector(".fecha-fin");
             const sucursal = formulario.querySelector(
                 'select[name="SucursalRetiroId"]'
             );
-
             const idReserva = formulario.querySelector(
                 'input[name="Id"]'
             );
@@ -203,6 +254,19 @@
             if (!selector || !inicio || !fin || !sucursal) {
                 return;
             }
+
+            const categorias = new Map();
+
+            Array.from(selector.options).forEach(opcion => {
+                if (Number(opcion.value) > 0) {
+                    categorias.set(
+                        opcion.value,
+                        Number(opcion.dataset.categoria || 0)
+                    );
+                }
+            });
+
+            formulario.dataset.vehiculoOriginal = selector.value;
 
             let numeroSolicitud = 0;
             let controladorActual = null;
@@ -216,6 +280,11 @@
                 );
 
                 selector.value = "0";
+
+                selector.dispatchEvent(
+                    new Event("change", { bubbles: true })
+                );
+
                 calcular(formulario);
             }
 
@@ -261,6 +330,7 @@
                 });
 
                 controladorActual = new AbortController();
+
                 selector.disabled = true;
 
                 mostrarMensaje(
@@ -295,7 +365,8 @@
                     actualizarOpciones(
                         formulario,
                         vehiculos,
-                        valorAnterior
+                        valorAnterior,
+                        categorias
                     );
                 } catch (error) {
                     if (error.name === "AbortError") {
@@ -311,6 +382,10 @@
                             "No se pudo consultar la disponibilidad",
                             "0"
                         )
+                    );
+
+                    selector.dispatchEvent(
+                        new Event("change", { bubbles: true })
                     );
 
                     mostrarMensaje(
@@ -332,36 +407,25 @@
             );
 
             if (costoExistente) {
-                const inicioOriginal = new Date(inicio.defaultValue);
-                const finOriginal = new Date(fin.defaultValue);
-
-                if (
-                    Number.isFinite(inicioOriginal.getTime()) &&
-                    Number.isFinite(finOriginal.getTime()) &&
-                    finOriginal > inicioOriginal
-                ) {
-                    costoExistente.dataset.dias = String(
-                        Math.max(
-                            1,
-                            Math.ceil(
-                                (finOriginal.getTime() -
-                                 inicioOriginal.getTime()) / 86400000
-                            )
-                        )
-                    );
-                }
+                costoExistente.dataset.dias = String(
+                    obtenerDias(inicio.defaultValue, fin.defaultValue)
+                );
             }
 
-            selector.addEventListener(
-                "change",
-                () => calcular(formulario)
-            );
+            selector.addEventListener("change", () => {
+                calcular(formulario);
+            });
+
+            if (selectorTarifa) {
+                selectorTarifa.addEventListener("change", () => {
+                    calcular(formulario);
+                });
+            }
 
             if (seguro) {
-                seguro.addEventListener(
-                    "change",
-                    () => calcular(formulario)
-                );
+                seguro.addEventListener("change", () => {
+                    calcular(formulario);
+                });
             }
 
             [inicio, fin, sucursal].forEach(campo => {
@@ -390,8 +454,16 @@
             consultarDisponibilidad();
         }
 
-        document.querySelectorAll(".form-reserva").forEach(
-            inicializarFormulario
-        );
+        function iniciar() {
+            document.querySelectorAll(".form-reserva").forEach(
+                inicializarFormulario
+            );
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", iniciar);
+        } else {
+            iniciar();
+        }
     })();
 </script>

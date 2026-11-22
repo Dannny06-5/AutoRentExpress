@@ -38,12 +38,11 @@ namespace AutoRentExpress.DTOs
         public string PlacaVehiculo { get; set; } = string.Empty;
         public string NombreSucursalRetiro { get; set; } = string.Empty;
         public string NombreSucursalDevolucion { get; set; } = string.Empty;
-
         public string NombreSeguro { get; set; } = string.Empty;
-
         public decimal CostoSeguro { get; set; }
-
         public bool TieneContrato { get; set; }
+        public int? TarifaId { get; set; }
+
     }
 
     public class ReservaOpcionDto
@@ -51,6 +50,7 @@ namespace AutoRentExpress.DTOs
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public decimal TarifaDiaria { get; set; }
+        public int CategoriaVehiculoId { get; set; }
     }
 
     public class ReservaCatalogosDto
@@ -59,5 +59,7 @@ namespace AutoRentExpress.DTOs
         public List<ReservaOpcionDto> Vehiculos { get; set; } = new();
         public List<ReservaOpcionDto> Sucursales { get; set; } = new();
         public List<ReservaOpcionDto> Seguros { get; set; } = new();
+        public List<ReservaTarifaOpcionDto> Tarifas { get; set; } = new();
+
     }
 }

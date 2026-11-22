@@ -13,6 +13,9 @@ namespace AutoRentExpress.Services
         private readonly IContratoRepository _contratoRepository;
         private readonly AppDbContext _context;
 
+        private const string ConceptoAlquiler =
+            "Alquiler de vehículo - tarifa aplicada";
+
         public ReservaService(
             IReservaRepository repository,
             IContratoRepository contratoRepository,
@@ -32,7 +35,7 @@ namespace AutoRentExpress.Services
                 .Select(c => c.ReservaId)
                 .ToHashSet();
 
-            var detalles = await _context.Set<ReservaDetalle>()
+            var seguros = await _context.ReservaDetalles
                 .AsNoTracking()
                 .Where(d => d.SeguroId != null)
                 .Include(d => d.Seguro)
@@ -42,18 +45,21 @@ namespace AutoRentExpress.Services
             {
                 var dto = Mapear(reserva);
 
-                dto.TieneContrato = idsConContrato.Contains(reserva.Id);
+                dto.TieneContrato =
+                    idsConContrato.Contains(reserva.Id);
 
-                var detalle = detalles.FirstOrDefault(
-                    d => d.ReservaId == reserva.Id);
+                var detallesSeguro = seguros
+                    .Where(d => d.ReservaId == reserva.Id)
+                    .ToList();
 
-                if (detalle != null)
+                if (detallesSeguro.Count > 0)
                 {
-                    dto.SeguroId = detalle.SeguroId;
-                    dto.NombreSeguro = detalle.Seguro?.Nombre
-                        ?? detalle.Concepto;
-                    dto.CostoSeguro = detalles
-                        .Where(d => d.ReservaId == reserva.Id)
+                    var primero = detallesSeguro[0];
+
+                    dto.SeguroId = primero.SeguroId;
+                    dto.NombreSeguro = primero.Seguro?.Nombre
+                        ?? primero.Concepto;
+                    dto.CostoSeguro = detallesSeguro
                         .Sum(d => d.Subtotal);
                 }
 
@@ -66,29 +72,27 @@ namespace AutoRentExpress.Services
             var reserva = await _repository.ObtenerPorIdAsync(id);
 
             if (reserva == null)
-            {
                 return null;
-            }
 
             var dto = Mapear(reserva);
 
             dto.TieneContrato =
                 await _contratoRepository.ExisteContratoReservaAsync(id);
 
-            var detalles = await _context.Set<ReservaDetalle>()
+            var seguros = await _context.ReservaDetalles
                 .AsNoTracking()
-                .Where(d => d.ReservaId == id && d.SeguroId != null)
+                .Where(d =>
+                    d.ReservaId == id &&
+                    d.SeguroId != null)
                 .Include(d => d.Seguro)
                 .ToListAsync();
 
-            var detalle = detalles.FirstOrDefault();
-
-            if (detalle != null)
+            if (seguros.Count > 0)
             {
-                dto.SeguroId = detalle.SeguroId;
-                dto.NombreSeguro = detalle.Seguro?.Nombre
-                    ?? detalle.Concepto;
-                dto.CostoSeguro = detalles.Sum(d => d.Subtotal);
+                dto.SeguroId = seguros[0].SeguroId;
+                dto.NombreSeguro = seguros[0].Seguro?.Nombre
+                    ?? seguros[0].Concepto;
+                dto.CostoSeguro = seguros.Sum(d => d.Subtotal);
             }
 
             return dto;
@@ -100,10 +104,16 @@ namespace AutoRentExpress.Services
             var vehiculos = await _repository.ObtenerVehiculosAsync();
             var sucursales = await _repository.ObtenerSucursalesAsync();
 
-            var seguros = await _context.Set<Seguro>()
+            var seguros = await _context.Seguros
                 .AsNoTracking()
                 .Where(s => s.Activo)
                 .OrderBy(s => s.Nombre)
+                .ToListAsync();
+
+            var tarifas = await _context.Tarifas
+                .AsNoTracking()
+                .Where(t => t.Activa && t.PrecioDiario > 0)
+                .OrderBy(t => t.Nombre)
                 .ToListAsync();
 
             return new ReservaCatalogosDto
@@ -114,12 +124,15 @@ namespace AutoRentExpress.Services
                     Nombre = $"{c.Nombres} {c.Apellidos}"
                 }).ToList(),
 
+
                 Vehiculos = vehiculos.Select(v => new ReservaOpcionDto
                 {
                     Id = v.Id,
                     Nombre = $"{v.Placa} - {v.Modelo?.Nombre}",
-                    TarifaDiaria = v.TarifaDiaria
+                    TarifaDiaria = v.TarifaDiaria,
+                    CategoriaVehiculoId = v.CategoriaVehiculoId
                 }).ToList(),
+
 
                 Sucursales = sucursales.Select(s => new ReservaOpcionDto
                 {
@@ -132,6 +145,16 @@ namespace AutoRentExpress.Services
                     Id = s.Id,
                     Nombre = s.Nombre,
                     TarifaDiaria = s.CostoDiario
+                }).ToList(),
+
+                Tarifas = tarifas.Select(t => new ReservaTarifaOpcionDto
+                {
+                    Id = t.Id,
+                    Nombre = t.Nombre,
+                    CategoriaVehiculoId = t.CategoriaVehiculoId,
+                    PrecioDiario = t.PrecioDiario,
+                    VigenteDesde = t.VigenteDesde,
+                    VigenteHasta = t.VigenteHasta
                 }).ToList()
             };
         }
@@ -164,19 +187,14 @@ namespace AutoRentExpress.Services
                     continue;
                 }
 
-                var estado = await _repository.ObtenerEstadoVehiculoAsync(
-                    vehiculo.EstadoVehiculoId);
+                var estado =
+                    await _repository.ObtenerEstadoVehiculoAsync(
+                        vehiculo.EstadoVehiculoId);
 
                 if (estado == null)
-                {
                     continue;
-                }
 
-                var nombreEstado = estado.Nombre
-                    .Trim()
-                    .TrimEnd('.')
-                    .Trim()
-                    .ToUpperInvariant();
+                var nombreEstado = NormalizarEstado(estado.Nombre);
 
                 if (nombreEstado != "DISPONIBLE" &&
                     nombreEstado != "RESERVADO")
@@ -192,9 +210,7 @@ namespace AutoRentExpress.Services
                     fechaInicio < r.FechaFin);
 
                 if (ocupado)
-                {
                     continue;
-                }
 
                 disponibles.Add(new ReservaOpcionDto
                 {
@@ -209,11 +225,19 @@ namespace AutoRentExpress.Services
 
         public async Task CrearAsync(ReservaDto dto)
         {
-            var tarifa = await ValidarAsync(dto);
+            var vehiculo = await ValidarAsync(dto);
+
+            var precio = await ObtenerPrecioAplicableAsync(
+                vehiculo,
+                dto.FechaInicio,
+                dto.FechaFin,
+                dto.TarifaId);
 
             var dias = CalcularDias(dto.FechaInicio, dto.FechaFin);
 
             var seguro = await ObtenerSeguroValidoAsync(dto.SeguroId);
+
+            var costoAlquiler = dias * precio;
 
             var costoSeguro = seguro == null
                 ? 0m
@@ -229,10 +253,7 @@ namespace AutoRentExpress.Services
                 FechaFin = dto.FechaFin,
                 FechaRegistro = DateTime.Now,
                 Estado = "Pendiente",
-                TotalEstimado = CalcularTotal(
-                    dto.FechaInicio,
-                    dto.FechaFin,
-                    tarifa) + costoSeguro
+                TotalEstimado = costoAlquiler + costoSeguro
             };
 
             await using var transaccion =
@@ -240,22 +261,32 @@ namespace AutoRentExpress.Services
 
             await _repository.AgregarAsync(reserva);
 
-            if (seguro != null)
-            {
-                var detalle = new ReservaDetalle
+            await _context.ReservaDetalles.AddAsync(
+                new ReservaDetalle
                 {
                     ReservaId = reserva.Id,
-                    SeguroId = seguro.Id,
-                    Concepto = $"Seguro: {seguro.Nombre}",
+                    SeguroId = null,
+                    Concepto = ConceptoAlquiler,
                     Cantidad = dias,
-                    PrecioUnitario = seguro.CostoDiario,
-                    Subtotal = costoSeguro
-                };
+                    PrecioUnitario = precio,
+                    Subtotal = costoAlquiler
+                });
 
-                await _context.Set<ReservaDetalle>().AddAsync(detalle);
-                await _context.SaveChangesAsync();
+            if (seguro != null)
+            {
+                await _context.ReservaDetalles.AddAsync(
+                    new ReservaDetalle
+                    {
+                        ReservaId = reserva.Id,
+                        SeguroId = seguro.Id,
+                        Concepto = $"Seguro: {seguro.Nombre}",
+                        Cantidad = dias,
+                        PrecioUnitario = seguro.CostoDiario,
+                        Subtotal = costoSeguro
+                    });
             }
 
+            await _context.SaveChangesAsync();
             await transaccion.CommitAsync();
         }
 
@@ -283,21 +314,66 @@ namespace AutoRentExpress.Services
                     "No puedes editar una reserva que ya tiene un contrato registrado.");
             }
 
-            var tarifa = await ValidarAsync(dto, dto.Id);
+            var vehiculo = await ValidarAsync(dto, dto.Id);
+
+            var mismoVehiculo =
+                reserva.VehiculoId == dto.VehiculoId;
+
+            decimal precio;
+
+            if (dto.TarifaId.HasValue && dto.TarifaId.Value > 0)
+            {
+                precio = await ObtenerPrecioAplicableAsync(
+                    vehiculo,
+                    dto.FechaInicio,
+                    dto.FechaFin,
+                    dto.TarifaId);
+            }
+            else if (mismoVehiculo)
+            {
+                precio = await ObtenerPrecioHistoricoAsync(reserva);
+            }
+            else
+            {
+                precio = vehiculo.TarifaDiaria;
+            }
 
             var dias = CalcularDias(dto.FechaInicio, dto.FechaFin);
 
-            var detallesSeguro = await _context.Set<ReservaDetalle>()
-                .Where(d =>
-                    d.ReservaId == reserva.Id &&
-                    d.SeguroId != null)
+            var detalles = await _context.ReservaDetalles
+                .Where(d => d.ReservaId == reserva.Id)
                 .ToListAsync();
+
+            var detallesSeguro = detalles
+                .Where(d => d.SeguroId != null)
+                .ToList();
 
             foreach (var detalle in detallesSeguro)
             {
                 detalle.Cantidad = dias;
                 detalle.Subtotal = dias * detalle.PrecioUnitario;
             }
+
+            var detalleAlquiler = detalles.FirstOrDefault(d =>
+                d.SeguroId == null &&
+                d.Concepto == ConceptoAlquiler);
+
+            if (detalleAlquiler == null)
+            {
+                detalleAlquiler = new ReservaDetalle
+                {
+                    ReservaId = reserva.Id,
+                    SeguroId = null,
+                    Concepto = ConceptoAlquiler
+                };
+
+                await _context.ReservaDetalles.AddAsync(
+                    detalleAlquiler);
+            }
+
+            detalleAlquiler.Cantidad = dias;
+            detalleAlquiler.PrecioUnitario = precio;
+            detalleAlquiler.Subtotal = dias * precio;
 
             var costoSeguro = detallesSeguro.Sum(d => d.Subtotal);
 
@@ -307,10 +383,8 @@ namespace AutoRentExpress.Services
             reserva.SucursalDevolucionId = dto.SucursalDevolucionId;
             reserva.FechaInicio = dto.FechaInicio;
             reserva.FechaFin = dto.FechaFin;
-            reserva.TotalEstimado = CalcularTotal(
-                dto.FechaInicio,
-                dto.FechaFin,
-                tarifa) + costoSeguro;
+            reserva.TotalEstimado =
+                detalleAlquiler.Subtotal + costoSeguro;
 
             await _repository.GuardarCambiosAsync();
         }
@@ -350,14 +424,113 @@ namespace AutoRentExpress.Services
             await _repository.GuardarCambiosAsync();
         }
 
-        private async Task<Seguro?> ObtenerSeguroValidoAsync(int? seguroId)
+        private async Task<decimal> ObtenerPrecioAplicableAsync(
+            Vehiculo vehiculo,
+            DateTime inicio,
+            DateTime fin,
+            int? tarifaId)
+        {
+            if (!tarifaId.HasValue || tarifaId.Value == 0)
+            {
+                return vehiculo.TarifaDiaria;
+            }
+
+            var tarifa = await _context.Tarifas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == tarifaId.Value);
+
+            if (tarifa == null)
+            {
+                throw new InvalidOperationException(
+                    "La tarifa seleccionada no existe.");
+            }
+
+            if (!tarifa.Activa)
+            {
+                throw new InvalidOperationException(
+                    "La tarifa seleccionada está inactiva.");
+            }
+
+            if (tarifa.CategoriaVehiculoId !=
+                vehiculo.CategoriaVehiculoId)
+            {
+                throw new InvalidOperationException(
+                    "La tarifa no corresponde a la categoría del vehículo.");
+            }
+
+            var primerDia = inicio.Date;
+
+            var ultimoDia = fin.TimeOfDay == TimeSpan.Zero
+                ? fin.Date.AddDays(-1)
+                : fin.Date;
+
+            if (tarifa.VigenteDesde.Date > primerDia ||
+                (tarifa.VigenteHasta.HasValue &&
+                 tarifa.VigenteHasta.Value.Date < ultimoDia))
+            {
+                throw new InvalidOperationException(
+                    "La tarifa seleccionada no cubre todo el período de alquiler.");
+            }
+
+            if (tarifa.PrecioDiario <= 0 ||
+                tarifa.PrecioDiario > 1000000m)
+            {
+                throw new InvalidOperationException(
+                    "La tarifa tiene un precio diario inválido.");
+            }
+
+            return tarifa.PrecioDiario;
+        }
+
+        private async Task<decimal> ObtenerPrecioHistoricoAsync(
+            Reserva reserva)
+        {
+            var detalle = await _context.ReservaDetalles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d =>
+                    d.ReservaId == reserva.Id &&
+                    d.SeguroId == null &&
+                    d.Concepto == ConceptoAlquiler);
+
+            if (detalle != null)
+            {
+                return detalle.PrecioUnitario;
+            }
+
+            var seguro = await _context.ReservaDetalles
+                .AsNoTracking()
+                .Where(d =>
+                    d.ReservaId == reserva.Id &&
+                    d.SeguroId != null)
+                .SumAsync(d => (decimal?)d.Subtotal) ?? 0m;
+
+            var dias = CalcularDias(
+                reserva.FechaInicio,
+                reserva.FechaFin);
+
+            var alquiler = reserva.TotalEstimado - seguro;
+
+            if (alquiler <= 0)
+            {
+                throw new InvalidOperationException(
+                    "No se pudo recuperar el precio original de la reserva.");
+            }
+
+            return Math.Round(
+                alquiler / dias,
+                2,
+                MidpointRounding.AwayFromZero);
+        }
+
+        private async Task<Seguro?> ObtenerSeguroValidoAsync(
+            int? seguroId)
         {
             if (!seguroId.HasValue || seguroId.Value == 0)
             {
                 return null;
             }
 
-            var seguro = await _context.Set<Seguro>()
+            var seguro = await _context.Seguros
                 .AsNoTracking()
                 .FirstOrDefaultAsync(s => s.Id == seguroId.Value);
 
@@ -383,7 +556,7 @@ namespace AutoRentExpress.Services
             return seguro;
         }
 
-        private async Task<decimal> ValidarAsync(
+        private async Task<Vehiculo> ValidarAsync(
             ReservaDto dto,
             int excluirReservaId = 0)
         {
@@ -412,18 +585,19 @@ namespace AutoRentExpress.Services
             }
             else
             {
-                var reservaOriginal =
-                    await _repository.ObtenerPorIdAsync(excluirReservaId);
+                var original =
+                    await _repository.ObtenerPorIdAsync(
+                        excluirReservaId);
 
-                if (reservaOriginal == null)
+                if (original == null)
                 {
                     throw new InvalidOperationException(
                         "La reserva que intentas editar no existe.");
                 }
 
-                if (dto.FechaInicio != reservaOriginal.FechaInicio)
+                if (dto.FechaInicio != original.FechaInicio)
                 {
-                    if (reservaOriginal.FechaInicio < ahora)
+                    if (original.FechaInicio < ahora)
                     {
                         throw new InvalidOperationException(
                             "No puedes modificar la fecha de retiro de una reserva que ya comenzó.");
@@ -432,7 +606,7 @@ namespace AutoRentExpress.Services
                     if (dto.FechaInicio < ahora)
                     {
                         throw new InvalidOperationException(
-                            "No puedes cambiar la fecha de retiro a una fecha u hora pasada.");
+                            "No puedes cambiar la fecha de retiro a una fecha pasada.");
                     }
                 }
             }
@@ -440,11 +614,12 @@ namespace AutoRentExpress.Services
             if (dto.FechaFin <= ahora)
             {
                 throw new InvalidOperationException(
-                    "La fecha de devolución debe ser posterior a la fecha y hora actual.");
+                    "La fecha de devolución debe ser posterior a la fecha actual.");
             }
 
             var cliente =
-                await _repository.ObtenerClienteAsync(dto.ClienteId);
+                await _repository.ObtenerClienteAsync(
+                    dto.ClienteId);
 
             if (cliente == null)
             {
@@ -459,7 +634,8 @@ namespace AutoRentExpress.Services
             }
 
             var vehiculo =
-                await _repository.ObtenerVehiculoAsync(dto.VehiculoId);
+                await _repository.ObtenerVehiculoAsync(
+                    dto.VehiculoId);
 
             if (vehiculo == null)
             {
@@ -483,26 +659,23 @@ namespace AutoRentExpress.Services
                     "El vehículo no tiene un estado válido.");
             }
 
-            var nombreEstado = estadoVehiculo.Nombre
-                .Trim()
-                .TrimEnd('.')
-                .Trim()
-                .ToUpperInvariant();
+            var estado = NormalizarEstado(
+                estadoVehiculo.Nombre);
 
-            if (nombreEstado == "MANTENIMIENTO" ||
-                nombreEstado == "EN MANTENIMIENTO" ||
-                nombreEstado == "ALQUILADO" ||
-                nombreEstado == "FUERA DE SERVICIO")
+            if (estado == "MANTENIMIENTO" ||
+                estado == "EN MANTENIMIENTO" ||
+                estado == "ALQUILADO" ||
+                estado == "FUERA DE SERVICIO")
             {
                 throw new InvalidOperationException(
                     $"No puedes reservar el vehículo porque su estado actual es: {estadoVehiculo.Nombre}.");
             }
 
-            if (nombreEstado != "DISPONIBLE" &&
-                nombreEstado != "RESERVADO")
+            if (estado != "DISPONIBLE" &&
+                estado != "RESERVADO")
             {
                 throw new InvalidOperationException(
-                    $"El estado {estadoVehiculo.Nombre} no permite realizar reservas.");
+                    $"El estado {estadoVehiculo.Nombre} no permite reservas.");
             }
 
             if (vehiculo.TarifaDiaria <= 0)
@@ -515,7 +688,8 @@ namespace AutoRentExpress.Services
                 await _repository.ObtenerSucursalAsync(
                     dto.SucursalRetiroId);
 
-            if (sucursalRetiro == null || !sucursalRetiro.Activa)
+            if (sucursalRetiro == null ||
+                !sucursalRetiro.Activa)
             {
                 throw new InvalidOperationException(
                     "Selecciona una sucursal de retiro activa.");
@@ -538,39 +712,39 @@ namespace AutoRentExpress.Services
                     "El vehículo no pertenece a la sucursal de retiro seleccionada.");
             }
 
-            var tieneConflicto =
+            var conflicto =
                 await _repository.ExisteConflictoAsync(
                     dto.VehiculoId,
                     dto.FechaInicio,
                     dto.FechaFin,
                     excluirReservaId);
 
-            if (tieneConflicto)
+            if (conflicto)
             {
                 throw new InvalidOperationException(
                     "El vehículo ya tiene una reserva para las fechas seleccionadas.");
             }
 
-            return vehiculo.TarifaDiaria;
+            return vehiculo;
+        }
+
+        private static string NormalizarEstado(string? estado)
+        {
+            return (estado ?? string.Empty)
+                .Trim()
+                .TrimEnd('.')
+                .Trim()
+                .ToUpperInvariant();
         }
 
         private static int CalcularDias(
             DateTime inicio,
             DateTime fin)
         {
-            var duracion = fin - inicio;
-
             return Math.Max(
                 1,
-                (int)Math.Ceiling(duracion.TotalDays));
-        }
-
-        private static decimal CalcularTotal(
-            DateTime inicio,
-            DateTime fin,
-            decimal tarifaDiaria)
-        {
-            return CalcularDias(inicio, fin) * tarifaDiaria;
+                (int)Math.Ceiling(
+                    (fin - inicio).TotalDays));
         }
 
         private static ReservaDto Mapear(Reserva reserva)
