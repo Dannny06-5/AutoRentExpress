@@ -9,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Conventions.Add(new PermisosPorRol());
+});
 
 var connectionString = builder.Configuration
     .GetConnectionString("DefaultConnection");
@@ -74,6 +77,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
+        .RequireRole("Administrador", "Empleado")
         .Build();
 });
 
@@ -138,7 +142,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();

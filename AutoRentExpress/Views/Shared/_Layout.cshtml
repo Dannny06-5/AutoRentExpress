@@ -464,18 +464,31 @@
                                 <ul class="dropdown-menu dropdown-menu-end are-dropdown"
                                     aria-labelledby="areMasModulos">
 
+
                                     @foreach (var modulo in modulosAdicionales)
                                     {
-                                        <li>
-                                            <a asp-controller="@modulo.Controlador"
-                                               asp-action="Index"
-                                               class="dropdown-item @(controladorActual == modulo.Controlador ? "active" : "")">
+                                        var moduloPermitido =
+                                        esAdministrador ||
+                                        modulo.Controlador == "Pagos" ||
+                                        modulo.Controlador == "Multas" ||
+                                        modulo.Controlador == "Mantenimientos" ||
+                                        modulo.Controlador == "Inspecciones" ||
+                                        modulo.Controlador == "Licencias";
 
-                                                <i class="bi @modulo.Icono"></i>
-                                                @modulo.Nombre
-                                            </a>
-                                        </li>
+                                        if (moduloPermitido)
+                                        {
+                                            <li>
+                                                <a asp-controller="@modulo.Controlador"
+                                                   asp-action="Index"
+                                                   class="dropdown-item @(controladorActual == modulo.Controlador ? "active" : "")">
+
+                                                    <i class="bi @modulo.Icono"></i>
+                                                    @modulo.Nombre
+                                                </a>
+                                            </li>
+                                        }
                                     }
+
                                 </ul>
                             </li>
 

@@ -13,6 +13,7 @@
     var enCurso = Model.Count(r => r.Estado == "En curso");
     var finalizadas = Model.Count(r => r.Estado == "Finalizada");
     var canceladas = Model.Count(r => r.Estado == "Cancelada");
+    var esAdministrador = User.IsInRole("Administrador");
 }
 
 <div class="container py-4">
@@ -243,7 +244,7 @@
                                             Detalles
                                         </button>
 
-                                        @if (permiteModificar)
+                                        @if (permiteModificar && esAdministrador)
                                         {
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-primary"
@@ -479,7 +480,7 @@
         </div>
     </div>
 
-    @if (permiteModificar)
+    @if (permiteModificar && esAdministrador)
     {
         <div class="modal fade"
              id="editarReserva-@reserva.Id"

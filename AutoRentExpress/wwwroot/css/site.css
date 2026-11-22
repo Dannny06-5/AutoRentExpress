@@ -29,3 +29,43 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+
+.modal[id^="editarReserva-"] .modal-dialog {
+    max-height: calc(100dvh - 2rem) !important;
+}
+
+.modal[id^="editarReserva-"] .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: calc(100dvh - 2rem) !important;
+    overflow: hidden !important;
+}
+
+    .modal[id^="editarReserva-"] .modal-content > form {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+        .modal[id^="editarReserva-"] .modal-content > form > .modal-body {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            overscroll-behavior: contain;
+        }
+
+.modal[id^="editarReserva-"] .modal-header,
+.modal[id^="editarReserva-"] .modal-footer {
+    flex-shrink: 0 !important;
+}
+
+@media (max-width: 575.98px) {
+    .modal[id^="editarReserva-"] .modal-dialog,
+    .modal[id^="editarReserva-"] .modal-content {
+        max-height: calc(100dvh - 1rem) !important;
+    }
+}
