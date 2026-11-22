@@ -1,17 +1,23 @@
 ﻿
+using AutoRentExpress.Data;
 using AutoRentExpress.DTOs;
 using AutoRentExpress.Models;
 using AutoRentExpress.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoRentExpress.Services
 {
     public class ContratoService : IContratoService
     {
         private readonly IContratoRepository _repository;
+        private readonly AppDbContext _context;
 
-        public ContratoService(IContratoRepository repository)
+        public ContratoService(
+            IContratoRepository repository,
+            AppDbContext context)
         {
             _repository = repository;
+            _context = context;
         }
 
         public async Task<List<ContratoDto>> ObtenerTodosAsync()
@@ -121,7 +127,8 @@ namespace AutoRentExpress.Services
 
             if (contrato == null)
             {
-                throw new KeyNotFoundException("El contrato no existe.");
+                throw new KeyNotFoundException(
+                    "El contrato no existe.");
             }
 
             if (contrato.Estado != "Pendiente de entrega")
@@ -166,16 +173,16 @@ namespace AutoRentExpress.Services
                     "Debes registrar primero la inspección de entrega.");
             }
 
-            var estadoActual = await _repository.ObtenerEstadoVehiculoAsync(
-                "Alquilado");
+            var estadoAlquilado =
+                await _repository.ObtenerEstadoVehiculoAsync("Alquilado");
 
-            var disponible = await _repository.ObtenerEstadoVehiculoAsync(
-                "Disponible");
+            var disponible =
+                await _repository.ObtenerEstadoVehiculoAsync("Disponible");
 
-            var reservado = await _repository.ObtenerEstadoVehiculoAsync(
-                "Reservado");
+            var reservado =
+                await _repository.ObtenerEstadoVehiculoAsync("Reservado");
 
-            if (estadoActual == null)
+            if (estadoAlquilado == null)
             {
                 throw new InvalidOperationException(
                     "No existe el estado Alquilado en el catálogo de vehículos.");
@@ -188,6 +195,8 @@ namespace AutoRentExpress.Services
                     "El vehículo no está en un estado que permita su entrega.");
             }
 
+            await ValidarLicenciaVigenteAsync(reserva.ClienteId);
+
             var ahora = DateTime.Now;
 
             contrato.Estado = "En curso";
@@ -195,7 +204,7 @@ namespace AutoRentExpress.Services
             contrato.FechaDevolucionReal = null;
 
             reserva.Estado = "En curso";
-            vehiculo.EstadoVehiculoId = estadoActual.Id;
+            vehiculo.EstadoVehiculoId = estadoAlquilado.Id;
 
             await _repository.GuardarCambiosAsync();
         }
@@ -206,7 +215,8 @@ namespace AutoRentExpress.Services
 
             if (contrato == null)
             {
-                throw new KeyNotFoundException("El contrato no existe.");
+                throw new KeyNotFoundException(
+                    "El contrato no existe.");
             }
 
             if (contrato.Estado != "En curso")
@@ -237,8 +247,8 @@ namespace AutoRentExpress.Services
                     "La reserva no figura como alquiler en curso.");
             }
 
-            var disponible = await _repository.ObtenerEstadoVehiculoAsync(
-                "Disponible");
+            var disponible =
+                await _repository.ObtenerEstadoVehiculoAsync("Disponible");
 
             if (disponible == null)
             {
@@ -246,8 +256,8 @@ namespace AutoRentExpress.Services
                     "No existe el estado Disponible en el catálogo de vehículos.");
             }
 
-            var alquilado = await _repository.ObtenerEstadoVehiculoAsync(
-                "Alquilado");
+            var alquilado =
+                await _repository.ObtenerEstadoVehiculoAsync("Alquilado");
 
             var ahora = DateTime.Now;
 
@@ -263,6 +273,32 @@ namespace AutoRentExpress.Services
             }
 
             await _repository.GuardarCambiosAsync();
+        }
+
+        private async Task ValidarLicenciaVigenteAsync(int clienteId)
+        {
+            var hoy = DateTime.Today;
+
+            var licencias = await _context.Set<LicenciaConducir>()
+                .AsNoTracking()
+                .Where(l => l.ClienteId == clienteId)
+                .ToListAsync();
+
+            if (!licencias.Any())
+            {
+                throw new InvalidOperationException(
+                    "No se puede confirmar la entrega porque el cliente no tiene una licencia de conducir registrada.");
+            }
+
+            var licenciaVigente = licencias.Any(l =>
+                l.FechaEmision.Date <= hoy &&
+                l.FechaVencimiento.Date >= hoy);
+
+            if (!licenciaVigente)
+            {
+                throw new InvalidOperationException(
+                    "No se puede confirmar la entrega porque el cliente no tiene una licencia de conducir vigente. Verifica las fechas de emisión y vencimiento.");
+            }
         }
 
         private static string GenerarNumeroContrato()
