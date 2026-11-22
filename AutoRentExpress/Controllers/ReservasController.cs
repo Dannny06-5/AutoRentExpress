@@ -1,3 +1,4 @@
+
 using AutoRentExpress.DTOs;
 using AutoRentExpress.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,15 +17,16 @@ namespace AutoRentExpress.Controllers
         public async Task<IActionResult> Index()
         {
             ViewBag.Catalogos = await _service.ObtenerCatalogosAsync();
+
             return View(await _service.ObtenerTodosAsync());
         }
 
         [HttpGet]
         public async Task<IActionResult> Disponibles(
-    DateTime fechaInicio,
-    DateTime fechaFin,
-    int sucursalRetiroId,
-    int reservaId = 0)
+            DateTime fechaInicio,
+            DateTime fechaFin,
+            int sucursalRetiroId,
+            int reservaId = 0)
         {
             var vehiculos = await _service.ObtenerDisponiblesAsync(
                 fechaInicio,
@@ -72,7 +74,9 @@ namespace AutoRentExpress.Controllers
             try
             {
                 await _service.CrearAsync(dto);
+
                 TempData["Exito"] = "Reserva registrada correctamente.";
+
                 return RedirectToAction(nameof(Index));
             }
             catch (InvalidOperationException ex)
@@ -81,6 +85,7 @@ namespace AutoRentExpress.Controllers
             }
 
             ViewBag.Catalogos = await _service.ObtenerCatalogosAsync();
+
             return View(dto);
         }
 
@@ -90,15 +95,22 @@ namespace AutoRentExpress.Controllers
             var reserva = await _service.ObtenerPorIdAsync(id);
 
             if (reserva == null)
-                return NotFound();
-
-            if (reserva.Estado == "Cancelada")
             {
-                TempData["Error"] = "No puedes editar una reserva cancelada.";
+                return NotFound();
+            }
+
+            if (reserva.TieneContrato ||
+                (reserva.Estado != "Pendiente" &&
+                 reserva.Estado != "Confirmada"))
+            {
+                TempData["Error"] =
+                    "Esta reserva no permite modificaciones porque tiene un contrato o su estado está bloqueado.";
+
                 return RedirectToAction(nameof(Index));
             }
 
             ViewBag.Catalogos = await _service.ObtenerCatalogosAsync();
+
             return View(reserva);
         }
 
@@ -117,7 +129,9 @@ namespace AutoRentExpress.Controllers
             try
             {
                 await _service.ActualizarAsync(dto);
+
                 TempData["Exito"] = "Reserva actualizada correctamente.";
+
                 return RedirectToAction(nameof(Index));
             }
             catch (InvalidOperationException ex)
@@ -130,6 +144,7 @@ namespace AutoRentExpress.Controllers
             }
 
             ViewBag.Catalogos = await _service.ObtenerCatalogosAsync();
+
             return View(dto);
         }
 
@@ -140,6 +155,7 @@ namespace AutoRentExpress.Controllers
             try
             {
                 await _service.CancelarAsync(id);
+
                 TempData["Exito"] = "Reserva cancelada correctamente.";
             }
             catch (InvalidOperationException ex)
@@ -164,6 +180,9 @@ namespace AutoRentExpress.Controllers
             ModelState.Remove(nameof(ReservaDto.PlacaVehiculo));
             ModelState.Remove(nameof(ReservaDto.NombreSucursalRetiro));
             ModelState.Remove(nameof(ReservaDto.NombreSucursalDevolucion));
+            ModelState.Remove(nameof(ReservaDto.NombreSeguro));
+            ModelState.Remove(nameof(ReservaDto.CostoSeguro));
+            ModelState.Remove(nameof(ReservaDto.TieneContrato));
         }
     }
 }

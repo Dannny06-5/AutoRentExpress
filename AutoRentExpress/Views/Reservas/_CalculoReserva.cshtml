@@ -1,4 +1,5 @@
-﻿<script>
+﻿
+<script>
     (() => {
         const formato = new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -7,16 +8,33 @@
 
         const urlDisponibles = '@Url.Action("Disponibles", "Reservas")';
 
+        function escribir(formulario, selector, valor) {
+            const elemento = formulario.querySelector(selector);
+
+            if (elemento) {
+                elemento.textContent = valor;
+            }
+        }
+
         function calcular(formulario) {
             const vehiculo = formulario.querySelector(".selector-vehiculo");
+            const seguro = formulario.querySelector(".selector-seguro");
             const inicio = formulario.querySelector(".fecha-inicio");
             const fin = formulario.querySelector(".fecha-fin");
+            const idReserva = formulario.querySelector('input[name="Id"]');
+            const costoExistente = formulario.querySelector(
+                ".seguro-costo-existente"
+            );
 
-            if (!vehiculo || !inicio || !fin)
+            if (!vehiculo || !inicio || !fin) {
                 return;
+            }
 
-            const opcion = vehiculo.selectedOptions[0];
-            const tarifa = Number(opcion?.dataset.tarifa || 0);
+            const opcionVehiculo = vehiculo.selectedOptions[0];
+
+            const tarifa = Number(
+                opcionVehiculo?.dataset.tarifa || 0
+            );
 
             const fechaInicio = new Date(inicio.value);
             const fechaFin = new Date(fin.value);
@@ -38,14 +56,66 @@
                 );
             }
 
-            formulario.querySelector(".reserva-tarifa").textContent =
-                formato.format(tarifa);
+            const subtotalVehiculo = dias * tarifa;
 
-            formulario.querySelector(".reserva-dias").textContent =
-                dias.toString();
+            let subtotalSeguro = 0;
 
-            formulario.querySelector(".reserva-total").textContent =
-                formato.format(dias * tarifa);
+            if (seguro) {
+                const opcionSeguro = seguro.selectedOptions[0];
+
+                const precioSeguro = Number(
+                    opcionSeguro?.dataset.precio || 0
+                );
+
+                subtotalSeguro = dias * precioSeguro;
+            } else if (
+                Number(idReserva?.value || 0) > 0 &&
+                costoExistente
+            ) {
+                const diasOriginales = Number(
+                    costoExistente.dataset.dias || 0
+                );
+
+                const montoOriginal = Number(
+                    costoExistente.value || 0
+                );
+
+                subtotalSeguro = diasOriginales > 0
+                    ? dias * (montoOriginal / diasOriginales)
+                    : montoOriginal;
+            }
+
+            const total = subtotalVehiculo + subtotalSeguro;
+
+            escribir(
+                formulario,
+                ".reserva-tarifa",
+                formato.format(tarifa)
+            );
+
+            escribir(
+                formulario,
+                ".reserva-dias",
+                dias.toString()
+            );
+
+            escribir(
+                formulario,
+                ".reserva-subtotal",
+                formato.format(subtotalVehiculo)
+            );
+
+            escribir(
+                formulario,
+                ".reserva-seguro",
+                formato.format(subtotalSeguro)
+            );
+
+            escribir(
+                formulario,
+                ".reserva-total",
+                formato.format(total)
+            );
         }
 
         function mostrarMensaje(formulario, mensaje, tipo) {
@@ -72,14 +142,12 @@
 
             selector.replaceChildren();
 
-            const inicial = new Option(
+            selector.add(new Option(
                 vehiculos.length > 0
                     ? "Selecciona un vehículo disponible"
                     : "No hay vehículos disponibles",
                 "0"
-            );
-
-            selector.add(inicial);
+            ));
 
             vehiculos.forEach(vehiculo => {
                 const opcion = new Option(
@@ -87,12 +155,15 @@
                     String(vehiculo.id)
                 );
 
-                opcion.dataset.tarifa = String(vehiculo.tarifaDiaria);
+                opcion.dataset.tarifa = String(
+                    vehiculo.tarifaDiaria
+                );
+
                 selector.add(opcion);
             });
 
             const existeAnterior = vehiculos.some(
-                v => String(v.id) === valorAnterior
+                vehiculo => String(vehiculo.id) === valorAnterior
             );
 
             selector.value = existeAnterior ? valorAnterior : "0";
@@ -118,43 +189,44 @@
 
         function inicializarFormulario(formulario) {
             const selector = formulario.querySelector(".selector-vehiculo");
+            const seguro = formulario.querySelector(".selector-seguro");
             const inicio = formulario.querySelector(".fecha-inicio");
             const fin = formulario.querySelector(".fecha-fin");
             const sucursal = formulario.querySelector(
                 'select[name="SucursalRetiroId"]'
             );
-            const idReserva = formulario.querySelector('input[name="Id"]');
 
-            if (!selector || !inicio || !fin || !sucursal)
-                return;
-
-            const opcionesOriginales = Array.from(selector.options).map(
-                opcion => ({
-                    id: opcion.value,
-                    nombre: opcion.text,
-                    tarifa: opcion.dataset.tarifa || "0"
-                })
+            const idReserva = formulario.querySelector(
+                'input[name="Id"]'
             );
+
+            if (!selector || !inicio || !fin || !sucursal) {
+                return;
+            }
 
             let numeroSolicitud = 0;
             let controladorActual = null;
 
-                function restaurarOpciones() {
-                    selector.replaceChildren(
-                    new Option("Selecciona primero la sucursal y las fechas", "0")
-                     );
+            function restaurarOpciones() {
+                selector.replaceChildren(
+                    new Option(
+                        "Selecciona primero la sucursal y las fechas",
+                        "0"
+                    )
+                );
 
-                        selector.value = "0";
-                        calcular(formulario);
-                        }
+                selector.value = "0";
+                calcular(formulario);
+            }
 
             async function consultarDisponibilidad() {
                 numeroSolicitud++;
 
                 const solicitud = numeroSolicitud;
 
-                if (controladorActual)
+                if (controladorActual) {
                     controladorActual.abort();
+                }
 
                 const fechaInicio = new Date(inicio.value);
                 const fechaFin = new Date(fin.value);
@@ -177,8 +249,9 @@
                 }
 
                 const valorAnterior = selector.value;
-                    selector.value = "0";
-                    calcular(formulario);
+
+                selector.value = "0";
+                calcular(formulario);
 
                 const parametros = new URLSearchParams({
                     fechaInicio: inicio.value,
@@ -188,7 +261,6 @@
                 });
 
                 controladorActual = new AbortController();
-
                 selector.disabled = true;
 
                 mostrarMensaje(
@@ -208,13 +280,17 @@
                         }
                     );
 
-                    if (!respuesta.ok)
-                        throw new Error("No se pudo consultar la disponibilidad.");
+                    if (!respuesta.ok) {
+                        throw new Error(
+                            "No se pudo consultar la disponibilidad."
+                        );
+                    }
 
                     const vehiculos = await respuesta.json();
 
-                    if (solicitud !== numeroSolicitud)
+                    if (solicitud !== numeroSolicitud) {
                         return;
+                    }
 
                     actualizarOpciones(
                         formulario,
@@ -222,14 +298,19 @@
                         valorAnterior
                     );
                 } catch (error) {
-                    if (error.name === "AbortError")
+                    if (error.name === "AbortError") {
                         return;
+                    }
 
-                    if (solicitud !== numeroSolicitud)
+                    if (solicitud !== numeroSolicitud) {
                         return;
+                    }
 
                     selector.replaceChildren(
-                        new Option("No se pudo consultar la disponibilidad", "0")
+                        new Option(
+                            "No se pudo consultar la disponibilidad",
+                            "0"
+                        )
                     );
 
                     mostrarMensaje(
@@ -240,15 +321,54 @@
 
                     calcular(formulario);
                 } finally {
-                    if (solicitud === numeroSolicitud)
+                    if (solicitud === numeroSolicitud) {
                         selector.disabled = false;
+                    }
                 }
             }
 
-            selector.addEventListener("change", () => calcular(formulario));
+            const costoExistente = formulario.querySelector(
+                ".seguro-costo-existente"
+            );
+
+            if (costoExistente) {
+                const inicioOriginal = new Date(inicio.defaultValue);
+                const finOriginal = new Date(fin.defaultValue);
+
+                if (
+                    Number.isFinite(inicioOriginal.getTime()) &&
+                    Number.isFinite(finOriginal.getTime()) &&
+                    finOriginal > inicioOriginal
+                ) {
+                    costoExistente.dataset.dias = String(
+                        Math.max(
+                            1,
+                            Math.ceil(
+                                (finOriginal.getTime() -
+                                 inicioOriginal.getTime()) / 86400000
+                            )
+                        )
+                    );
+                }
+            }
+
+            selector.addEventListener(
+                "change",
+                () => calcular(formulario)
+            );
+
+            if (seguro) {
+                seguro.addEventListener(
+                    "change",
+                    () => calcular(formulario)
+                );
+            }
 
             [inicio, fin, sucursal].forEach(campo => {
-                campo.addEventListener("change", consultarDisponibilidad);
+                campo.addEventListener(
+                    "change",
+                    consultarDisponibilidad
+                );
             });
 
             formulario.addEventListener("submit", evento => {

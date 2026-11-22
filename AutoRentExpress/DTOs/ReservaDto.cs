@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using System.ComponentModel.DataAnnotations;
 
 namespace AutoRentExpress.DTOs
 {
@@ -24,6 +25,8 @@ namespace AutoRentExpress.DTOs
         [Required(ErrorMessage = "Indica la fecha de devolución")]
         public DateTime FechaFin { get; set; }
 
+        public int? SeguroId { get; set; }
+
         public DateTime FechaRegistro { get; set; }
 
         public string Estado { get; set; } = "Pendiente";
@@ -35,8 +38,12 @@ namespace AutoRentExpress.DTOs
         public string PlacaVehiculo { get; set; } = string.Empty;
         public string NombreSucursalRetiro { get; set; } = string.Empty;
         public string NombreSucursalDevolucion { get; set; } = string.Empty;
-        public bool TieneContrato { get; set; }
 
+        public string NombreSeguro { get; set; } = string.Empty;
+
+        public decimal CostoSeguro { get; set; }
+
+        public bool TieneContrato { get; set; }
     }
 
     public class ReservaOpcionDto
@@ -51,6 +58,6 @@ namespace AutoRentExpress.DTOs
         public List<ReservaOpcionDto> Clientes { get; set; } = new();
         public List<ReservaOpcionDto> Vehiculos { get; set; } = new();
         public List<ReservaOpcionDto> Sucursales { get; set; } = new();
+        public List<ReservaOpcionDto> Seguros { get; set; } = new();
     }
-
 }

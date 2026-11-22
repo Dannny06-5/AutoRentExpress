@@ -67,7 +67,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Pendientes</h6>
-                    <h2 class="fw-bold text-warning">@pendientes</h2>
+                    <h2 class="fw-bold text-warning">
+                        @pendientes
+                    </h2>
                 </div>
             </div>
         </div>
@@ -76,7 +78,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">En curso</h6>
-                    <h2 class="fw-bold text-primary">@enCurso</h2>
+                    <h2 class="fw-bold text-primary">
+                        @enCurso
+                    </h2>
                 </div>
             </div>
         </div>
@@ -85,15 +89,34 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Finalizadas</h6>
-                    <h2 class="fw-bold text-success">@finalizadas</h2>
+                    <h2 class="fw-bold text-success">
+                        @finalizadas
+                    </h2>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="d-flex flex-wrap gap-3 mb-3 text-muted small">
-        <span>Confirmadas: <strong>@confirmadas</strong></span>
-        <span>Canceladas: <strong>@canceladas</strong></span>
+        <span>
+            Confirmadas:
+            <strong>@confirmadas</strong>
+        </span>
+
+        <span>
+            Canceladas:
+            <strong>@canceladas</strong>
+        </span>
+
+        <span>
+            Con contrato:
+            <strong>@Model.Count(r => r.TieneContrato)</strong>
+        </span>
+
+        <span>
+            Con seguro:
+            <strong>@Model.Count(r => r.SeguroId.HasValue)</strong>
+        </span>
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -107,6 +130,7 @@
                             <th>Vehículo</th>
                             <th>Retiro</th>
                             <th>Devolución</th>
+                            <th>Seguro</th>
                             <th>Total</th>
                             <th>Estado</th>
                             <th>Acciones</th>
@@ -122,12 +146,19 @@
                             !reserva.TieneContrato;
 
                             <tr>
-                                <td class="fw-semibold">#@reserva.Id</td>
-
-                                <td>@reserva.NombreCliente</td>
+                                <td class="fw-semibold">
+                                    #@reserva.Id
+                                </td>
 
                                 <td>
-                                    <div>@reserva.NombreVehiculo</div>
+                                    @reserva.NombreCliente
+                                </td>
+
+                                <td>
+                                    <div>
+                                        @reserva.NombreVehiculo
+                                    </div>
+
                                     <small class="text-muted">
                                         @reserva.PlacaVehiculo
                                     </small>
@@ -142,6 +173,25 @@
                                 </td>
 
                                 <td>
+                                    @if (reserva.SeguroId.HasValue)
+                                    {
+                                        <span class="badge bg-info text-dark">
+                                            Con seguro
+                                        </span>
+
+                                        <div class="small text-muted mt-1">
+                                            @reserva.NombreSeguro
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">
+                                            Sin seguro
+                                        </span>
+                                    }
+                                </td>
+
+                                <td class="fw-semibold">
                                     $@reserva.TotalEstimado.ToString("N2")
                                 </td>
 
@@ -234,6 +284,15 @@
          reserva.Estado == "Confirmada") &&
         !reserva.TieneContrato;
 
+    var diasOriginales = Math.Max(
+        1,
+        (int)Math.Ceiling(
+            (reserva.FechaFin - reserva.FechaInicio).TotalDays
+        )
+    );
+
+    var subtotalVehiculo = reserva.TotalEstimado - reserva.CostoSeguro;
+
     <div class="modal fade"
          id="detalleReserva-@reserva.Id"
          tabindex="-1"
@@ -241,6 +300,7 @@
 
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
+
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">
                         Detalles de la Reserva #@reserva.Id
@@ -254,64 +314,156 @@
 
                 <div class="modal-body p-4">
                     <dl class="row mb-0">
-                        <dt class="col-sm-5">Cliente</dt>
+                        <dt class="col-sm-5">
+                            Cliente
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.NombreCliente
                         </dd>
 
-                        <dt class="col-sm-5">Vehículo</dt>
+                        <dt class="col-sm-5">
+                            Vehículo
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.NombreVehiculo
                             (@reserva.PlacaVehiculo)
                         </dd>
 
-                        <dt class="col-sm-5">Sucursal de retiro</dt>
+                        <dt class="col-sm-5">
+                            Sucursal de retiro
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.NombreSucursalRetiro
                         </dd>
 
-                        <dt class="col-sm-5">Sucursal de devolución</dt>
+                        <dt class="col-sm-5">
+                            Sucursal de devolución
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.NombreSucursalDevolucion
                         </dd>
 
-                        <dt class="col-sm-5">Fecha de retiro</dt>
+                        <dt class="col-sm-5">
+                            Fecha de retiro
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.FechaInicio.ToString("dd/MM/yyyy HH:mm")
                         </dd>
 
-                        <dt class="col-sm-5">Fecha de devolución</dt>
+                        <dt class="col-sm-5">
+                            Fecha de devolución
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.FechaFin.ToString("dd/MM/yyyy HH:mm")
                         </dd>
 
-                        <dt class="col-sm-5">Registro</dt>
+                        <dt class="col-sm-5">
+                            Registro
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.FechaRegistro.ToString("dd/MM/yyyy HH:mm")
                         </dd>
 
-                        <dt class="col-sm-5">Estado</dt>
+                        <dt class="col-sm-5">
+                            Estado
+                        </dt>
+
                         <dd class="col-sm-7">
                             @reserva.Estado
                         </dd>
 
-                        <dt class="col-sm-5">Contrato generado</dt>
+                        <dt class="col-sm-5">
+                            Contrato generado
+                        </dt>
+
                         <dd class="col-sm-7">
                             @(reserva.TieneContrato ? "Sí" : "No")
                         </dd>
 
-                        <dt class="col-sm-5">Total estimado</dt>
-                        <dd class="col-sm-7 fw-bold">
-                            $@reserva.TotalEstimado.ToString("N2")
+                        <dt class="col-sm-5">
+                            Días facturables
+                        </dt>
+
+                        <dd class="col-sm-7">
+                            @diasOriginales
                         </dd>
                     </dl>
 
+                    <hr />
+
+                    <h6 class="fw-bold mb-3">
+                        Desglose del alquiler
+                    </h6>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>
+                            Alquiler del vehículo
+                        </span>
+
+                        <strong>
+                            $@subtotalVehiculo.ToString("N2")
+                        </strong>
+                    </div>
+
+                    @if (reserva.SeguroId.HasValue)
+                    {
+                        <div class="alert alert-info py-2">
+                            <div class="fw-semibold">
+                                Seguro contratado
+                            </div>
+
+                            <div>
+                                @reserva.NombreSeguro
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>
+                                Costo total del seguro
+                            </span>
+
+                            <strong>
+                                $@reserva.CostoSeguro.ToString("N2")
+                            </strong>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">
+                                Seguro adicional
+                            </span>
+
+                            <span class="text-muted">
+                                No contratado
+                            </span>
+                        </div>
+                    }
+
+                    <hr />
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">
+                            Total estimado
+                        </span>
+
+                        <strong class="fs-5 text-primary">
+                            $@reserva.TotalEstimado.ToString("N2")
+                        </strong>
+                    </div>
+
                     @if (reserva.TieneContrato)
                     {
-                        <div class="alert alert-info mt-3 mb-0">
+                        <div class="alert alert-secondary mt-3 mb-0">
                             Esta reserva ya tiene un contrato registrado.
-                            Las modificaciones del alquiler deben seguir
-                            el procedimiento correspondiente al contrato.
+                            No permite cambios ni cancelación desde Reservas.
                         </div>
                     }
                 </div>
@@ -336,6 +488,7 @@
 
             <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                 <div class="modal-content border-0 shadow">
+
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title">
                             Editar Reserva #@reserva.Id
@@ -495,7 +648,44 @@
                                            class="form-control fecha-fin"
                                            required />
                                 </div>
+                            </div>
 
+                            <div class="mt-3">
+                                <label class="form-label fw-semibold">
+                                    Seguro adicional
+                                </label>
+
+                                @if (reserva.SeguroId.HasValue)
+                                {
+                                    <div class="alert alert-info mb-2">
+                                        <strong>
+                                            @reserva.NombreSeguro
+                                        </strong>
+
+                                        <div class="small mt-1">
+                                            Este seguro ya está contratado
+                                            y conservará su precio diario original.
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <input type="text"
+                                           class="form-control"
+                                           value="Sin seguro adicional"
+                                           readonly />
+                                }
+
+                                <input type="hidden"
+                                       class="seguro-costo-existente"
+                                       value="@reserva.CostoSeguro.ToString(CultureInfo.InvariantCulture)"
+                                       data-dias="@diasOriginales" />
+
+                                <div class="form-text">
+                                    El seguro no se puede cambiar desde la edición.
+                                    Su costo se ajusta automáticamente cuando
+                                    modificas la duración del alquiler.
+                                </div>
                             </div>
 
                             <div class="card bg-light border-0 mt-4">
@@ -505,23 +695,52 @@
                                     </h6>
 
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span>Tarifa diaria</span>
+                                        <span>
+                                            Tarifa diaria del vehículo
+                                        </span>
+
                                         <strong class="reserva-tarifa">
                                             $0.00
                                         </strong>
                                     </div>
 
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span>Días facturables</span>
+                                        <span>
+                                            Días facturables
+                                        </span>
+
                                         <strong class="reserva-dias">
                                             0
                                         </strong>
                                     </div>
 
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>
+                                            Subtotal del vehículo
+                                        </span>
+
+                                        <strong class="reserva-subtotal">
+                                            $0.00
+                                        </strong>
+                                    </div>
+
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>
+                                            Subtotal del seguro
+                                        </span>
+
+                                        <strong class="reserva-seguro">
+                                            $0.00
+                                        </strong>
+                                    </div>
+
                                     <hr />
 
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total estimado</span>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold">
+                                            Total estimado
+                                        </span>
+
                                         <strong class="reserva-total fs-5 text-primary">
                                             $0.00
                                         </strong>
@@ -554,6 +773,7 @@
 
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
+
                     <div class="modal-header bg-danger text-white">
                         <h5 class="modal-title">
                             Cancelar Reserva
