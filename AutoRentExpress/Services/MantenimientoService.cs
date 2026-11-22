@@ -1,16 +1,23 @@
-﻿using AutoRentExpress.DTOs;
+﻿
+using AutoRentExpress.Data;
+using AutoRentExpress.DTOs;
 using AutoRentExpress.Models;
 using AutoRentExpress.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace AutoRentExpress.Services
 {
     public class MantenimientoService : IMantenimientoService
     {
         private readonly IMantenimientoRepository _repository;
+        private readonly AppDbContext _context;
 
-        public MantenimientoService(IMantenimientoRepository repository)
+        public MantenimientoService(
+            IMantenimientoRepository repository,
+            AppDbContext context)
         {
             _repository = repository;
+            _context = context;
         }
 
         public async Task<List<MantenimientoDto>> ObtenerTodosAsync()
@@ -114,7 +121,8 @@ namespace AutoRentExpress.Services
 
         public async Task IniciarAsync(int id)
         {
-            var mantenimiento = await _repository.ObtenerPorIdAsync(id);
+            var mantenimiento = await _context.Set<Mantenimiento>()
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (mantenimiento == null)
             {
@@ -128,8 +136,8 @@ namespace AutoRentExpress.Services
                     "Solo puedes iniciar mantenimientos pendientes.");
             }
 
-            var vehiculo = await _repository.ObtenerVehiculoAsync(
-                mantenimiento.VehiculoId);
+            var vehiculo = await _context.Set<Vehiculo>()
+                .FirstOrDefaultAsync(v => v.Id == mantenimiento.VehiculoId);
 
             if (vehiculo == null || !vehiculo.Activo)
             {
@@ -154,16 +162,75 @@ namespace AutoRentExpress.Services
                     "El vehículo ya tiene otro mantenimiento en proceso.");
             }
 
+            var estados = await _context.Set<EstadoVehiculo>()
+                .AsNoTracking()
+                .ToListAsync();
+
+            var estadoDisponible = estados.FirstOrDefault(e =>
+                NormalizarEstado(e.Nombre) == "DISPONIBLE");
+
+            var estadoMantenimiento = estados.FirstOrDefault(e =>
+                NormalizarEstado(e.Nombre) == "EN MANTENIMIENTO" ||
+                NormalizarEstado(e.Nombre) == "MANTENIMIENTO");
+
+            if (estadoDisponible == null)
+            {
+                throw new InvalidOperationException(
+                    "No existe el estado Disponible en el catálogo de vehículos.");
+            }
+
+            if (estadoMantenimiento == null)
+            {
+                throw new InvalidOperationException(
+                    "No existe el estado En mantenimiento o Mantenimiento en el catálogo de vehículos.");
+            }
+
+            var tieneContratoActivo = await _context.Set<Contrato>()
+                .AsNoTracking()
+                .AnyAsync(c =>
+                    c.Reserva.VehiculoId == vehiculo.Id &&
+                    (c.Estado == "En curso" ||
+                     c.Estado == "Pendiente de entrega"));
+
+            if (tieneContratoActivo)
+            {
+                throw new InvalidOperationException(
+                    "No puedes iniciar el mantenimiento porque el vehículo tiene un contrato en curso o pendiente de entrega.");
+            }
+
+            var tieneReservasPendientes = await _context.Set<Reserva>()
+                .AsNoTracking()
+                .AnyAsync(r =>
+                    r.VehiculoId == vehiculo.Id &&
+                    (r.Estado == "Pendiente" ||
+                     r.Estado == "Confirmada") &&
+                    r.FechaFin > DateTime.Now);
+
+            if (tieneReservasPendientes)
+            {
+                throw new InvalidOperationException(
+                    "No puedes iniciar el mantenimiento porque el vehículo tiene reservas pendientes o confirmadas que todavía no han terminado.");
+            }
+
+            if (vehiculo.EstadoVehiculoId != estadoDisponible.Id)
+            {
+                throw new InvalidOperationException(
+                    "Solo puedes iniciar el mantenimiento de un vehículo que esté Disponible.");
+            }
+
             mantenimiento.Estado = "En proceso";
             mantenimiento.FechaInicio = DateTime.Now;
             mantenimiento.FechaFin = null;
+
+            vehiculo.EstadoVehiculoId = estadoMantenimiento.Id;
 
             await _repository.GuardarCambiosAsync();
         }
 
         public async Task FinalizarAsync(int id)
         {
-            var mantenimiento = await _repository.ObtenerPorIdAsync(id);
+            var mantenimiento = await _context.Set<Mantenimiento>()
+                .FirstOrDefaultAsync(m => m.Id == id);
 
             if (mantenimiento == null)
             {
@@ -177,8 +244,54 @@ namespace AutoRentExpress.Services
                     "Solo puedes finalizar mantenimientos que estén en proceso.");
             }
 
+            var vehiculo = await _context.Set<Vehiculo>()
+                .FirstOrDefaultAsync(v => v.Id == mantenimiento.VehiculoId);
+
+            if (vehiculo == null)
+            {
+                throw new InvalidOperationException(
+                    "El vehículo asociado al mantenimiento no existe.");
+            }
+
+            if (await _repository.ExisteMantenimientoActivoAsync(
+                vehiculo.Id,
+                mantenimiento.Id))
+            {
+                throw new InvalidOperationException(
+                    "El vehículo tiene otro mantenimiento en proceso.");
+            }
+
+            var estados = await _context.Set<EstadoVehiculo>()
+                .AsNoTracking()
+                .ToListAsync();
+
+            var disponible = estados.FirstOrDefault(e =>
+                NormalizarEstado(e.Nombre) == "DISPONIBLE");
+
+            var mantenimientoEstado = estados.FirstOrDefault(e =>
+                NormalizarEstado(e.Nombre) == "EN MANTENIMIENTO" ||
+                NormalizarEstado(e.Nombre) == "MANTENIMIENTO");
+
+            if (disponible == null)
+            {
+                throw new InvalidOperationException(
+                    "No existe el estado Disponible en el catálogo de vehículos.");
+            }
+
+            if (mantenimientoEstado == null)
+            {
+                throw new InvalidOperationException(
+                    "No existe el estado En mantenimiento o Mantenimiento en el catálogo de vehículos.");
+            }
+
             mantenimiento.Estado = "Finalizado";
             mantenimiento.FechaFin = DateTime.Now;
+
+            if (vehiculo.EstadoVehiculoId == mantenimientoEstado.Id &&
+                vehiculo.Activo)
+            {
+                vehiculo.EstadoVehiculoId = disponible.Id;
+            }
 
             await _repository.GuardarCambiosAsync();
         }
@@ -254,6 +367,15 @@ namespace AutoRentExpress.Services
                 throw new InvalidOperationException(
                     "El vehículo tiene otro mantenimiento en proceso.");
             }
+        }
+
+        private static string NormalizarEstado(string valor)
+        {
+            return valor
+                .Trim()
+                .TrimEnd('.')
+                .Trim()
+                .ToUpperInvariant();
         }
 
         private static string? Normalizar(string? valor)
